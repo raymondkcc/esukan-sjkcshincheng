@@ -7,10 +7,12 @@ This is a separate Vite + React e-Sukan app copied from the Sin Ming Space workf
 - Generates an Excel student namelist template.
 - Imports completed namelists with `Name`, `Class`, `IC`, and `Rumah Sukan`.
 - Uses normalized `IC` as the student document key.
-- Stores settings, students, events, registrations, and results in Firestore.
-- Lets any user who can open the app key in participants/results.
-- Provides a realtime live board with `total-only` mode by default.
-- Keeps optional class marks available through Settings.
+- Adds sports events in bulk by category, following the Sin Ming e-Sukan flow.
+- Registers students into created events.
+- Enters event results against registered students.
+- Generates printable result slips for each event.
+- Provides a realtime live board with fullscreen display and `total-only` mode by default.
+- Includes light and dark professional dashboard themes.
 
 ## Local Setup
 
