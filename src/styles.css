@@ -260,25 +260,50 @@ button {
 .live-board-surface:fullscreen {
   width: 100vw;
   height: 100vh;
-  padding: 42px;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(18px, 3vh, 34px);
+  overflow: hidden;
   background: var(--surface);
 }
 
 .live-board-surface:fullscreen .section-head h2 {
-  font-size: clamp(2rem, 5vw, 5rem);
+  font-size: clamp(1.8rem, 4vw, 4.4rem);
+}
+
+.live-board-surface:fullscreen .section-head {
+  flex: 0 0 auto;
+  margin-bottom: clamp(10px, 2vh, 22px);
 }
 
 .live-board-surface:fullscreen .score-list {
-  gap: clamp(18px, 3vh, 34px);
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-auto-rows: minmax(0, 1fr);
+  gap: clamp(6px, 1.2vh, 14px);
 }
 
 .live-board-surface:fullscreen .score-track {
-  height: clamp(74px, 11vh, 128px);
+  height: 100%;
 }
 
 .live-board-surface:fullscreen .score-number {
-  font-size: clamp(3rem, 8vw, 8rem);
+  font-size: clamp(1.9rem, 5vw, 6rem);
+}
+
+.live-board-surface:fullscreen .score-row {
+  min-height: 0;
+  grid-template-columns: clamp(28px, 4vw, 70px) minmax(0, 1fr) clamp(66px, 10vw, 150px);
+}
+
+.live-board-surface:fullscreen .rank {
+  font-size: clamp(1.2rem, 3.5vw, 4rem);
+}
+
+.live-board-surface:fullscreen .house {
+  padding-inline: clamp(10px, 2vw, 28px);
+  font-size: clamp(1rem, 3vw, 3rem);
 }
 
 .score-list {
