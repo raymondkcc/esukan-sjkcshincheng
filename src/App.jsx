@@ -29,7 +29,7 @@ import {
   Users,
 } from 'lucide-react';
 
-const DEFAULT_HOUSES = ['MERAH', 'BIRU', 'KUNING', 'HIJAU', 'UNGU'];
+const DEFAULT_HOUSES = ['红B组', '黄A组', '红A组', '青B组', '蓝A组', '黄B组', '蓝B组', '青A组'];
 const CATEGORY_ORDER = [
   'L1', 'P1', 'L2', 'P2', 'L3', 'P3',
   'L4', 'P4', 'L5', 'P5', 'L6', 'P6',
@@ -82,6 +82,10 @@ const db = firebaseApp ? getFirestore(firebaseApp) : null;
 const normalizeIc = (value) => String(value || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 const normalizeHouse = (value) => String(value || '').trim();
 const houseMatchKey = (value) => normalizeHouse(value).toLocaleUpperCase('ms-MY');
+const splitHouseList = (value) => String(value || '')
+  .split(/[,，;；\n\r]+/)
+  .map(normalizeHouse)
+  .filter(Boolean);
 const sortByName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''));
 const getYear = (className) => {
   const match = String(className || '').match(/[1-6]/);
@@ -106,12 +110,12 @@ const buildEventName = (baseName, category) => {
 };
 const houseClassName = (house) => {
   const name = houseMatchKey(house);
-  if (name.includes('MERAH')) return 'house red';
-  if (name.includes('BIRU')) return 'house blue';
-  if (name.includes('KUNING')) return 'house yellow';
-  if (name.includes('HIJAU')) return 'house green';
-  if (name.includes('UNGU')) return 'house purple';
-  if (name.includes('JINGGA')) return 'house orange';
+  if (name.includes('红') || name.includes('MERAH') || name.includes('RED')) return 'house red';
+  if (name.includes('蓝') || name.includes('BIRU') || name.includes('BLUE')) return 'house blue';
+  if (name.includes('黄') || name.includes('KUNING') || name.includes('YELLOW')) return 'house yellow';
+  if (name.includes('青') || name.includes('绿') || name.includes('HIJAU') || name.includes('GREEN')) return 'house green';
+  if (name.includes('紫') || name.includes('UNGU') || name.includes('PURPLE')) return 'house purple';
+  if (name.includes('橙') || name.includes('JINGGA') || name.includes('ORANGE')) return 'house orange';
   return 'house slate';
 };
 
@@ -957,7 +961,7 @@ function App() {
               <label>School name<input value={settings.schoolName || ''} onChange={(event) => setSettings({ ...settings, schoolName: event.target.value })} /></label>
               <label>Event title<input value={settings.eventTitle || ''} onChange={(event) => setSettings({ ...settings, eventTitle: event.target.value })} /></label>
               <label>Year<input type="number" value={settings.year || ''} onChange={(event) => setSettings({ ...settings, year: Number(event.target.value) })} /></label>
-              <label>Houses<input value={houses.join(', ')} onChange={(event) => setSettings({ ...settings, houses: event.target.value.split(',').map(normalizeHouse).filter(Boolean) })} /></label>
+              <label>Houses<textarea rows="4" value={houses.join('\n')} onChange={(event) => setSettings({ ...settings, houses: splitHouseList(event.target.value) })} /></label>
               <label>
                 Live board
                 <select value={settings.liveBoardMode || 'total-only'} onChange={(event) => setSettings({ ...settings, liveBoardMode: event.target.value })}>
