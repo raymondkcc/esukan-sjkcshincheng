@@ -1,0 +1,21 @@
+{
+  "name": "esukan-standalone-firebase",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^6.0.1",
+    "firebase": "^12.15.0",
+    "lucide-react": "^1.8.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "vite": "^8.0.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {}
+}
