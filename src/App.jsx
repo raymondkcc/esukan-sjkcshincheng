@@ -80,7 +80,8 @@ const firebaseApp = hasFirebaseConfig ? initializeApp(firebaseConfig) : null;
 const db = firebaseApp ? getFirestore(firebaseApp) : null;
 
 const normalizeIc = (value) => String(value || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-const normalizeHouse = (value) => String(value || '').trim().toUpperCase();
+const normalizeHouse = (value) => String(value || '').trim();
+const houseMatchKey = (value) => normalizeHouse(value).toLocaleUpperCase('ms-MY');
 const sortByName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''));
 const getYear = (className) => {
   const match = String(className || '').match(/[1-6]/);
@@ -104,7 +105,7 @@ const buildEventName = (baseName, category) => {
   return `${name} (${cat})`;
 };
 const houseClassName = (house) => {
-  const name = normalizeHouse(house);
+  const name = houseMatchKey(house);
   if (name.includes('MERAH')) return 'house red';
   if (name.includes('BIRU')) return 'house blue';
   if (name.includes('KUNING')) return 'house yellow';
@@ -222,7 +223,7 @@ function App() {
     const matchesQuery = !query || [student.name, student.className, student.ic, student.house].some((value) =>
       String(value || '').toLowerCase().includes(query),
     );
-    const matchesHouse = !registerHouse || normalizeHouse(student.house) === registerHouse;
+    const matchesHouse = !registerHouse || houseMatchKey(student.house) === houseMatchKey(registerHouse);
     return matchesQuery && matchesHouse;
   });
 
@@ -234,7 +235,7 @@ function App() {
       const student = studentMap.get(registration.studentIc) || {};
       const house = normalizeHouse(registration.house || student.house);
       const points = Number(registration.points || 0);
-      const row = houseTotals.find((item) => item.name === house);
+      const row = houseTotals.find((item) => houseMatchKey(item.name) === houseMatchKey(house));
       if (row) row.total += points;
       if (student.className) {
         classTotals.set(student.className, (classTotals.get(student.className) || 0) + points);
@@ -377,7 +378,7 @@ function App() {
       if (year < 4 || year > 6) return 'Tarik Tali is only for Tahun 4, 5, 6.';
       const sameHouseYear = eventList.filter((registration) => {
         const registeredStudent = studentMap.get(registration.studentIc) || {};
-        return normalizeHouse(registration.house) === normalizeHouse(student.house) && getYear(registeredStudent.className) === year;
+        return houseMatchKey(registration.house) === houseMatchKey(student.house) && getYear(registeredStudent.className) === year;
       });
       if (sameHouseYear.length >= Number(settings.maxTarikTaliPerHouseYear || 4)) {
         return `Tarik Tali quota is full for Tahun ${year} Rumah ${student.house}.`;
