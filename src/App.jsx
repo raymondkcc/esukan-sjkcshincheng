@@ -163,6 +163,7 @@ const houseClassName = (house) => {
 function App() {
   const fileInputRef = useRef(null);
   const liveBoardRef = useRef(null);
+  const savedSettingsRef = useRef('');
   const params = new URLSearchParams(window.location.search);
   const siteId = params.get('site') || import.meta.env.VITE_ESUKAN_SITE_ID || 'sinming-esukan';
 
@@ -172,7 +173,8 @@ function App() {
   const [accessPassword, setAccessPassword] = useState('');
   const [accessError, setAccessError] = useState('');
   const [theme, setTheme] = useState(() => localStorage.getItem('esukan-theme') || 'light');
-  const [loading, setLoading] = useState(true);
+  const [loadedSections, setLoadedSections] = useState({ settings: false, students: false, events: false, registrations: false });
+  const [uploadingStudents, setUploadingStudents] = useState(false);
   const [notice, setNotice] = useState('');
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [students, setStudents] = useState([]);
@@ -180,6 +182,9 @@ function App() {
   const [registrations, setRegistrations] = useState([]);
   const [eventForm, setEventForm] = useState(DEFAULT_EVENT_FORM);
   const [studentQuery, setStudentQuery] = useState('');
+  const [studentClassFilter, setStudentClassFilter] = useState('');
+  const [studentGenderFilter, setStudentGenderFilter] = useState('');
+  const [studentHouseFilter, setStudentHouseFilter] = useState('');
   const [registerEventId, setRegisterEventId] = useState('');
   const [registerQuery, setRegisterQuery] = useState('');
   const [registerHouse, setRegisterHouse] = useState('');
@@ -203,6 +208,7 @@ function App() {
   const liveBoardHeaderSchool = String(settings.liveBoardHeaderSchool || settings.schoolName || DEFAULT_SETTINGS.schoolName).trim();
   const liveBoardHeaderTitle = String(settings.liveBoardHeaderTitle || DEFAULT_SETTINGS.liveBoardHeaderTitle).trim();
   const visibleTabs = ACCESS_LEVELS[accessRole]?.tabs || ACCESS_LEVELS.user.tabs;
+  const loading = !Object.values(loadedSections).every(Boolean);
 
   useEffect(() => {
     localStorage.setItem('esukan-theme', theme);
@@ -218,14 +224,25 @@ function App() {
 
   useEffect(() => {
     if (!refs) return undefined;
+    setLoadedSections({ settings: false, students: false, events: false, registrations: false });
+    const markLoaded = (key) => setLoadedSections((current) => ({ ...current, [key]: true }));
+    const handleSnapshotError = (key, error) => {
+      console.error(error);
+      markLoaded(key);
+      setNotice(`Could not load ${key}: ${error.message || 'Firebase error'}`);
+    };
 
     const unsubscribers = [
       onSnapshot(refs.settings, (snapshot) => {
-        setSettings({ ...DEFAULT_SETTINGS, ...(snapshot.exists() ? snapshot.data() : {}) });
-      }),
+        const nextSettings = { ...DEFAULT_SETTINGS, ...(snapshot.exists() ? snapshot.data() : {}) };
+        setSettings(nextSettings);
+        savedSettingsRef.current = JSON.stringify({ ...nextSettings, updatedAt: undefined });
+        markLoaded('settings');
+      }, (error) => handleSnapshotError('settings', error)),
       onSnapshot(refs.students, (snapshot) => {
         setStudents(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort(sortByName));
-      }),
+        markLoaded('students');
+      }, (error) => handleSnapshotError('students', error)),
       onSnapshot(refs.events, (snapshot) => {
         const nextEvents = snapshot.docs
           .map((item) => ({ id: item.id, ...item.data() }))
@@ -234,11 +251,12 @@ function App() {
         setRegisterEventId((current) => current || (nextEvents[0] ? nextEvents[0].id : ''));
         setResultEventId((current) => current || (nextEvents[0] ? nextEvents[0].id : ''));
         setSlipEventId((current) => current || (nextEvents[0] ? nextEvents[0].id : ''));
-      }),
+        markLoaded('events');
+      }, (error) => handleSnapshotError('events', error)),
       onSnapshot(refs.registrations, (snapshot) => {
         setRegistrations(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })));
-        setLoading(false);
-      }),
+        markLoaded('registrations');
+      }, (error) => handleSnapshotError('registrations', error)),
     ];
 
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
@@ -269,13 +287,28 @@ function App() {
   const registrationsForResultEvent = eventRegistrations.get(resultEventId) || [];
   const registrationsForSlipEvent = eventRegistrations.get(slipEventId) || [];
   const registeredStudentSet = new Set(registrationsForRegisterEvent.map((item) => item.studentIc));
+  const studentClassOptions = useMemo(() => (
+    Array.from(new Set(students.map((student) => String(student.className || '').trim()).filter(Boolean)))
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+  ), [students]);
+  const studentGenderOptions = useMemo(() => (
+    Array.from(new Set(students.map((student) => String(student.gender || '').trim()).filter(Boolean)))
+      .sort((a, b) => a.localeCompare(b))
+  ), [students]);
+  const studentHouseOptions = useMemo(() => (
+    Array.from(new Set(students.map((student) => normalizeHouse(student.house)).filter(Boolean)))
+      .sort((a, b) => a.localeCompare(b))
+  ), [students]);
 
   const filteredStudents = students.filter((student) => {
     const query = studentQuery.trim().toLowerCase();
-    if (!query) return true;
-    return [student.name, student.chineseName, student.className, student.gender, student.house].some((value) =>
+    const matchesQuery = !query || [student.name, student.chineseName, student.className, student.gender, student.house].some((value) =>
       String(value || '').toLowerCase().includes(query),
     );
+    const matchesClass = !studentClassFilter || String(student.className || '') === studentClassFilter;
+    const matchesGender = !studentGenderFilter || String(student.gender || '') === studentGenderFilter;
+    const matchesHouse = !studentHouseFilter || houseMatchKey(student.house) === houseMatchKey(studentHouseFilter);
+    return matchesQuery && matchesClass && matchesGender && matchesHouse;
   });
 
   const registerCandidates = students.filter((student) => {
@@ -335,7 +368,15 @@ function App() {
       setNotice('Staff access required.');
       return;
     }
-    await setDoc(refs.settings, { ...settings, houses, updatedAt: serverTimestamp() }, { merge: true });
+    const payload = { ...settings, houses };
+    const { updatedAt, ...settingsForSignature } = payload;
+    const settingsSignature = JSON.stringify(settingsForSignature);
+    if (settingsSignature === savedSettingsRef.current) {
+      setNotice('Settings unchanged.');
+      return;
+    }
+    await setDoc(refs.settings, { ...payload, updatedAt: serverTimestamp() }, { merge: true });
+    savedSettingsRef.current = settingsSignature;
     setNotice('Settings saved.');
   };
 
@@ -407,53 +448,74 @@ function App() {
       return;
     }
 
-    const XLSX = await import('xlsx');
-    const workbook = XLSX.read(await file.arrayBuffer());
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-    const validStudents = rows
-      .map((row) => {
-        const student = {
-          name: getCell(row, ['name', 'nama', 'nama murid']),
-          chineseName: getCell(row, ['姓名', 'chinese name', 'nama cina']),
-          className: getCell(row, ['kelas', 'class', 'class name']),
-          house: normalizeHouse(getCell(row, ['rumah sukan / house', 'rumah sukan', 'rumah', 'house'])),
-          gender: normalizeGender(getCell(row, ['jantina/gender', 'jantina', 'gender', 'sex'])),
-        };
-        const studentKey = buildStudentKey(student);
-        return {
-          ...student,
-          ic: studentKey,
-          studentKey,
-        };
-      })
-      .filter((student) => student.studentKey && student.name && student.className && student.house && student.gender);
+    setUploadingStudents(true);
+    setNotice(`Uploading ${file.name}...`);
+    try {
+      const XLSX = await import('xlsx');
+      const workbook = XLSX.read(await file.arrayBuffer());
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+      const validStudents = rows
+        .map((row) => {
+          const student = {
+            name: getCell(row, ['name', 'nama', 'nama murid']),
+            chineseName: getCell(row, ['姓名', 'chinese name', 'nama cina']),
+            className: getCell(row, ['kelas', 'class', 'class name']),
+            house: normalizeHouse(getCell(row, ['rumah sukan / house', 'rumah sukan', 'rumah', 'house'])),
+            gender: normalizeGender(getCell(row, ['jantina/gender', 'jantina', 'gender', 'sex'])),
+          };
+          const studentKey = buildStudentKey(student);
+          return {
+            ...student,
+            ic: studentKey,
+            studentKey,
+          };
+        })
+        .filter((student) => student.studentKey && student.name && student.className && student.house && student.gender);
 
-    if (!validStudents.length) {
-      setNotice('No valid rows. Required columns: Name, Kelas, Rumah Sukan / House, Jantina/Gender.');
-      return;
-    }
-
-    const batch = writeBatch(db);
-    const importedHouses = [];
-    const importedHouseKeys = new Set();
-    validStudents.forEach((student) => {
-      const houseKey = houseMatchKey(student.house);
-      if (houseKey && !importedHouseKeys.has(houseKey)) {
-        importedHouseKeys.add(houseKey);
-        importedHouses.push(student.house);
+      if (!validStudents.length) {
+        setNotice('No valid rows. Required columns: Name, Kelas, Rumah Sukan / House, Jantina/Gender.');
+        return;
       }
-      batch.set(doc(refs.students, student.studentKey), {
-        ...student,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-    });
-    if (importedHouses.length) {
-      batch.set(refs.settings, { houses: importedHouses, updatedAt: serverTimestamp() }, { merge: true });
+
+      const batches = [];
+      let batch = writeBatch(db);
+      let writeCount = 0;
+      const queueWrite = (callback) => {
+        if (writeCount >= 450) {
+          batches.push(batch);
+          batch = writeBatch(db);
+          writeCount = 0;
+        }
+        callback(batch);
+        writeCount += 1;
+      };
+      const importedHouses = [];
+      const importedHouseKeys = new Set();
+      validStudents.forEach((student) => {
+        const houseKey = houseMatchKey(student.house);
+        if (houseKey && !importedHouseKeys.has(houseKey)) {
+          importedHouseKeys.add(houseKey);
+          importedHouses.push(student.house);
+        }
+        queueWrite((activeBatch) => activeBatch.set(doc(refs.students, student.studentKey), {
+          ...student,
+          updatedAt: serverTimestamp(),
+        }, { merge: true }));
+      });
+      if (importedHouses.length) {
+        queueWrite((activeBatch) => activeBatch.set(refs.settings, { houses: importedHouses, updatedAt: serverTimestamp() }, { merge: true }));
+      }
+      if (writeCount > 0) batches.push(batch);
+      await Promise.all(batches.map((queuedBatch) => queuedBatch.commit()));
+      setNotice(`${validStudents.length} students imported. Houses updated from template.`);
+    } catch (error) {
+      console.error(error);
+      setNotice(`Upload failed: ${error.message || 'Please check the file and Firebase permissions.'}`);
+    } finally {
+      setUploadingStudents(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
-    await batch.commit();
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    setNotice(`${validStudents.length} students imported. Houses updated from template.`);
   };
 
   const getRegistrationBlockReason = (event, eventList, student) => {
@@ -683,6 +745,23 @@ function App() {
     );
   }
 
+  if (loading) {
+    return (
+      <div className={`app-shell theme-${theme}`}>
+        <main className="loading-screen" role="status" aria-live="polite">
+          <section className="loading-card">
+            <img className="loading-logo" src={SCHOOL_LOGO_PATH} alt={`${settings.schoolName || DEFAULT_SETTINGS.schoolName} logo`} />
+            <div className="spinner" aria-hidden="true" />
+            <p className="eyebrow">{settings.schoolName || DEFAULT_SETTINGS.schoolName}</p>
+            <h1>Loading e-Sukan data</h1>
+            <p className="help-text">Please wait while Firebase loads settings, students, events, and scores.</p>
+          </section>
+        </main>
+        {notice && <button className="notice" type="button" onClick={() => setNotice('')}>{notice}</button>}
+      </div>
+    );
+  }
+
   const allTabs = [
     ['live', Monitor, 'Live Board'],
     ['students', Users, 'Students'],
@@ -746,10 +825,17 @@ function App() {
       )}
 
       {notice && <button className="notice" type="button" onClick={() => setNotice('')}>{notice}</button>}
+      {uploadingStudents && (
+        <div className="upload-overlay" role="status" aria-live="polite">
+          <div className="upload-card">
+            <div className="spinner" aria-hidden="true" />
+            <strong>Uploading student namelist</strong>
+            <span>Saving to Firebase. Please keep this page open.</span>
+          </div>
+        </div>
+      )}
 
       <main className="workspace">
-        {loading && <div className="status-line">Loading realtime data...</div>}
-
         {activeTab === 'live' && (
           <section className={settings.liveBoardMode === 'total-only' ? 'live-grid total-only' : 'live-grid'}>
             <div className="panel scoreboard-panel live-board-surface" ref={liveBoardRef}>
@@ -839,13 +925,52 @@ function App() {
                 <Download size={16} /> Download Excel Template
               </button>
               <input ref={fileInputRef} hidden type="file" accept=".xlsx,.xls,.csv" onChange={(event) => importStudents(event.target.files?.[0])} />
-              <button className="secondary-button" type="button" onClick={() => fileInputRef.current?.click()}>
-                <Upload size={16} /> Upload Completed List
+              <button className="secondary-button" type="button" disabled={uploadingStudents} onClick={() => fileInputRef.current?.click()}>
+                <Upload size={16} /> {uploadingStudents ? 'Uploading...' : 'Upload Completed List'}
               </button>
               <label>
                 Search
                 <input value={studentQuery} onChange={(event) => setStudentQuery(event.target.value)} placeholder="Name, 姓名, kelas, gender, house" />
               </label>
+              <div className="student-filter-grid">
+                <label>
+                  Kelas
+                  <select value={studentClassFilter} onChange={(event) => setStudentClassFilter(event.target.value)}>
+                    <option value="">All classes</option>
+                    {studentClassOptions.map((className) => <option key={className} value={className}>{className}</option>)}
+                  </select>
+                </label>
+                <label>
+                  Gender
+                  <select value={studentGenderFilter} onChange={(event) => setStudentGenderFilter(event.target.value)}>
+                    <option value="">All genders</option>
+                    {studentGenderOptions.map((gender) => <option key={gender} value={gender}>{gender}</option>)}
+                  </select>
+                </label>
+                <label>
+                  House
+                  <select value={studentHouseFilter} onChange={(event) => setStudentHouseFilter(event.target.value)}>
+                    <option value="">All houses</option>
+                    {studentHouseOptions.map((house) => <option key={house} value={house}>{house}</option>)}
+                  </select>
+                </label>
+              </div>
+              <div className="stats-box">
+                <span>Showing: <b>{filteredStudents.length}</b></span>
+                <span>Total: <b>{students.length}</b></span>
+              </div>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => {
+                  setStudentQuery('');
+                  setStudentClassFilter('');
+                  setStudentGenderFilter('');
+                  setStudentHouseFilter('');
+                }}
+              >
+                Clear Search & Filters
+              </button>
               <p className="help-text">Required columns: Name, Kelas, Rumah Sukan / House, Jantina/Gender. Use Lelaki/Male/Boy or Perempuan/Female/Girl. Optional column: 姓名.</p>
             </div>
 
