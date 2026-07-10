@@ -302,6 +302,16 @@ function App() {
   const registrationsForRegisterEvent = eventRegistrations.get(registerEventId) || [];
   const registrationsForResultEvent = eventRegistrations.get(resultEventId) || [];
   const registrationsForSlipEvent = eventRegistrations.get(slipEventId) || [];
+  const sortedSlipRegistrations = [...registrationsForSlipEvent].sort((a, b) => {
+    const positionA = Number(a.position || 99);
+    const positionB = Number(b.position || 99);
+    if (positionA !== positionB) return positionA - positionB;
+    const studentA = studentMap.get(a.studentIc) || {};
+    const studentB = studentMap.get(b.studentIc) || {};
+    const classCompare = String(studentA.className || a.className || '').localeCompare(String(studentB.className || b.className || ''), undefined, { numeric: true });
+    if (classCompare) return classCompare;
+    return displayStudentName(studentA, a.studentIc).localeCompare(displayStudentName(studentB, b.studentIc));
+  });
   const registeredStudentSet = new Set(registrationsForRegisterEvent.map((item) => item.studentIc));
   const studentClassOptions = useMemo(() => (
     Array.from(new Set(students.map((student) => String(student.className || '').trim()).filter(Boolean)))
@@ -752,6 +762,8 @@ function App() {
       updatedAt: serverTimestamp(),
       updatedMs: Date.now(),
     });
+    setResultEventId(registerEvent.id);
+    setSlipEventId(registerEvent.id);
   };
 
   const updateResult = async (registration, position) => {
@@ -804,9 +816,7 @@ function App() {
       return;
     }
 
-    const rows = registrationsForSlipEvent
-      .filter((registration) => Number(registration.position || 0) > 0)
-      .sort((a, b) => Number(a.position || 99) - Number(b.position || 99))
+    const rows = sortedSlipRegistrations
       .map((registration) => {
         const student = studentMap.get(registration.studentIc) || {};
         return `
@@ -848,7 +858,7 @@ function App() {
           </div>
           <table>
             <thead><tr><th>Place</th><th>Name</th><th>Class</th><th>House</th><th>Points</th></tr></thead>
-            <tbody>${rows || '<tr><td colspan="5">No result entered.</td></tr>'}</tbody>
+            <tbody>${rows || '<tr><td colspan="5">No registered students.</td></tr>'}</tbody>
           </table>
           <div class="signatures">
             <div class="line">Prepared by</div>
@@ -1524,6 +1534,10 @@ function App() {
                   {events.map((event) => <option key={event.id} value={event.id}>{eventLabel(event)}</option>)}
                 </select>
               </label>
+              <div className="stats-box">
+                <span>Registered: <b>{registrationsForSlipEvent.length}</b></span>
+                <span>Completed results: <b>{registrationsForSlipEvent.filter((registration) => Number(registration.position || 0) > 0).length}</b></span>
+              </div>
               <button className="primary-button" type="button" onClick={printResultSlip}><Printer size={16} /> Generate Slip</button>
             </div>
             <div className="panel slip-preview">
@@ -1534,21 +1548,21 @@ function App() {
                 <table>
                   <thead><tr><th>Place</th><th>Name</th><th>Class</th><th>House</th><th>Points</th></tr></thead>
                   <tbody>
-                    {registrationsForSlipEvent
-                      .filter((registration) => Number(registration.position || 0) > 0)
-                      .sort((a, b) => Number(a.position || 99) - Number(b.position || 99))
+                    {sortedSlipRegistrations.length ? sortedSlipRegistrations
                       .map((registration) => {
                         const student = studentMap.get(registration.studentIc) || {};
                         return (
                           <tr key={registration.id}>
-                            <td>{registration.position}</td>
+                            <td>{registration.position || '-'}</td>
                             <td>{displayStudentName(student, registration.studentIc)}</td>
                             <td>{student.className || registration.className}</td>
                             <td>{registration.house || student.house}</td>
                             <td>{registration.points || 0}</td>
                           </tr>
                         );
-                      })}
+                      }) : (
+                        <tr><td colSpan="5">No registered students.</td></tr>
+                      )}
                   </tbody>
                 </table>
               </div>
