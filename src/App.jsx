@@ -38,7 +38,7 @@ const CATEGORY_ORDER = [
 ];
 const DEFAULT_SETTINGS = {
   schoolName: 'SJKC Shin Cheng',
-  eventTitle: 'Kejohanan e-Sukan',
+  eventTitle: 'Sistem e-Sukan',
   year: new Date().getFullYear(),
   houses: DEFAULT_HOUSES,
   liveBoardMode: 'total-only',
@@ -701,8 +701,7 @@ function App() {
           <img className="site-logo" src={SCHOOL_LOGO_PATH} alt={`${settings.schoolName || DEFAULT_SETTINGS.schoolName} logo`} />
           <div>
             <p className="eyebrow">{settings.schoolName}</p>
-            <h1>{settings.eventTitle}</h1>
-            <p className="subtle">Realtime score management for sports day</p>
+            <h1>Sistem e-Sukan</h1>
           </div>
         </div>
         <div className="top-actions">
