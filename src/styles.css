@@ -73,7 +73,7 @@ button {
   top: 0;
   z-index: 20;
   display: grid;
-  grid-template-columns: minmax(240px, 420px) minmax(0, 1fr);
+  grid-template-columns: minmax(240px, 360px) minmax(0, 1fr);
   gap: 24px;
   align-items: center;
   padding: 16px clamp(16px, 4vw, 46px);
@@ -115,12 +115,18 @@ button {
 
 .top-actions {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "tabs tabs"
+    "access theme";
   gap: 10px;
   align-items: center;
+  justify-items: end;
 }
 
 .tabbar {
+  grid-area: tabs;
+  width: 100%;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -167,6 +173,14 @@ button {
   box-shadow: 0 10px 24px rgba(23, 32, 51, 0.18);
 }
 
+.tab {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding-inline: 11px;
+  white-space: nowrap;
+  font-size: 0.94rem;
+}
+
 .theme-dark .tab.active,
 .theme-dark .primary-button,
 .theme-dark .chip.active {
@@ -176,6 +190,7 @@ button {
 }
 
 .theme-toggle {
+  grid-area: theme;
   width: 42px;
   padding: 0;
 }
@@ -194,11 +209,13 @@ button {
 }
 
 .viewer-pill {
+  grid-area: tabs;
   justify-self: end;
   padding: 0 14px;
 }
 
 .access-controls {
+  grid-area: access;
   gap: 6px;
   padding: 5px;
 }
@@ -850,6 +867,10 @@ td .house {
     grid-template-columns: 1fr;
   }
 
+  .top-actions {
+    justify-items: start;
+  }
+
   .tabbar {
     justify-content: flex-start;
   }
@@ -877,6 +898,11 @@ td .house {
 
   .top-actions {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "tabs"
+      "access"
+      "theme";
+    justify-items: stretch;
   }
 
   .theme-toggle {
@@ -888,7 +914,13 @@ td .house {
   }
 
   .access-controls {
+    width: 100%;
     flex-wrap: wrap;
+  }
+
+  .tab {
+    width: 100%;
+    min-width: 0;
   }
 
   .score-row {
