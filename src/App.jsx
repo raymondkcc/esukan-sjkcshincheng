@@ -69,15 +69,15 @@ const ADMIN_PASSWORD = 'BBC8419adm';
 const ACCESS_LEVELS = {
   user: {
     label: 'Live View',
-    tabs: ['live'],
+    tabs: ['live', 'viewResults'],
   },
   teacher: {
     label: 'Teacher',
-    tabs: ['live', 'students', 'events', 'register', 'slips', 'settings'],
+    tabs: ['live', 'viewResults', 'students', 'events', 'register', 'slips', 'settings'],
   },
   admin: {
     label: 'Admin',
-    tabs: ['live', 'students', 'events', 'register', 'results', 'slips', 'settings'],
+    tabs: ['live', 'viewResults', 'students', 'events', 'register', 'results', 'slips', 'settings'],
   },
 };
 
@@ -391,6 +391,33 @@ function App() {
       .sort((a, b) => Number(b.updatedMs || 0) - Number(a.updatedMs || 0))
       .slice(0, 12);
   }, [eventMap, registrations, studentMap]);
+  const viewResults = useMemo(() => {
+    return registrations
+      .filter((registration) => Number(registration.position || 0) > 0)
+      .map((registration) => ({
+        ...registration,
+        student: studentMap.get(registration.studentIc),
+        event: eventMap.get(registration.eventId),
+      }))
+      .sort((a, b) => {
+        const eventCompare = String(a.event?.name || '').localeCompare(String(b.event?.name || ''), undefined, { numeric: true });
+        if (eventCompare) return eventCompare;
+        return Number(a.position || 99) - Number(b.position || 99);
+      });
+  }, [eventMap, registrations, studentMap]);
+  const jurySheetRows = sortedSlipRegistrations
+    .map((registration) => ({
+      registration,
+      student: studentMap.get(registration.studentIc) || {},
+    }))
+    .sort((a, b) => {
+      const houseCompare = houseMatchKey(a.registration.house || a.student.house).localeCompare(houseMatchKey(b.registration.house || b.student.house));
+      if (houseCompare) return houseCompare;
+      const classCompare = String(a.student.className || a.registration.className || '').localeCompare(String(b.student.className || b.registration.className || ''), undefined, { numeric: true });
+      if (classCompare) return classCompare;
+      return displayStudentName(a.student, a.registration.studentIc).localeCompare(displayStudentName(b.student, b.registration.studentIc));
+    })
+    .map((row, index) => ({ ...row, participantNo: index + 1 }));
 
   const getScoring = () => ({
     1: Number(eventForm.points1 || 0),
@@ -816,16 +843,16 @@ function App() {
       return;
     }
 
-    const rows = sortedSlipRegistrations
-      .map((registration) => {
-        const student = studentMap.get(registration.studentIc) || {};
+    const rows = jurySheetRows
+      .map(({ registration, student, participantNo }) => {
         return `
           <tr>
-            <td>${registration.position || ''}</td>
+            <td>${participantNo}</td>
             <td>${displayStudentName(student, registration.studentIc)}</td>
             <td>${student.className || registration.className || ''}</td>
             <td>${registration.house || student.house || ''}</td>
-            <td>${registration.points || 0}</td>
+            <td>${registration.position || ''}</td>
+            <td></td>
           </tr>
         `;
       }).join('');
@@ -837,13 +864,15 @@ function App() {
         <head>
           <title>Result Slip - ${slipEvent.name}</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 28px; color: #111827; }
+            body { font-family: Arial, sans-serif; padding: 24px; color: #111827; }
             .header { text-align: center; border-bottom: 2px solid #111827; padding-bottom: 12px; margin-bottom: 18px; }
             h1 { margin: 0; font-size: 22px; text-transform: uppercase; }
             h2 { margin: 8px 0 0; font-size: 17px; }
             table { width: 100%; border-collapse: collapse; margin-top: 18px; }
             th, td { border: 1px solid #111827; padding: 8px; font-size: 13px; text-align: left; }
             th { background: #f3f4f6; text-transform: uppercase; font-size: 11px; }
+            td:nth-child(1), td:nth-child(5) { text-align: center; width: 72px; }
+            td:nth-child(6) { height: 30px; width: 160px; }
             .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 54px; }
             .line { border-top: 1px solid #111827; padding-top: 8px; font-size: 12px; font-weight: bold; }
             @media print { button { display: none; } }
@@ -857,8 +886,8 @@ function App() {
             <p>${eventLabel(slipEvent)}</p>
           </div>
           <table>
-            <thead><tr><th>Place</th><th>Name</th><th>Class</th><th>House</th><th>Points</th></tr></thead>
-            <tbody>${rows || '<tr><td colspan="5">No registered students.</td></tr>'}</tbody>
+            <thead><tr><th>No. Peserta</th><th>Name</th><th>Class</th><th>House</th><th>Place / Kedudukan</th><th>Record</th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="6">No registered students.</td></tr>'}</tbody>
           </table>
           <div class="signatures">
             <div class="line">Prepared by</div>
@@ -936,10 +965,11 @@ function App() {
 
   const allTabs = [
     ['live', Monitor, 'Live Board'],
+    ['viewResults', FileSpreadsheet, 'View Results'],
     ['students', Users, 'Students'],
     ['events', Trophy, 'Events'],
     ['register', ClipboardList, 'Register'],
-    ['results', Medal, 'Results'],
+    ['results', Medal, 'Results Entry'],
     ['slips', Printer, 'Slips'],
     ['settings', Settings, 'Settings'],
   ];
@@ -1464,6 +1494,47 @@ function App() {
           </section>
         )}
 
+        {activeTab === 'viewResults' && visibleTabs.includes('viewResults') && (
+          <section className="split-grid">
+            <div className="panel control-panel">
+              <div className="section-head">
+                <div>
+                  <p className="eyebrow">Readonly</p>
+                  <h2>View Results</h2>
+                </div>
+                <FileSpreadsheet size={22} />
+              </div>
+              <div className="stats-box">
+                <span>Completed: <b>{viewResults.length}</b></span>
+                <span>Events: <b>{new Set(viewResults.map((result) => result.eventId)).size}</b></span>
+              </div>
+              <p className="help-text">This page only shows keyed-in results. Result entry remains admin-only.</p>
+            </div>
+
+            <div className="panel table-panel">
+              <table>
+                <thead>
+                  <tr><th>Event</th><th>Place</th><th>Name</th><th>Class</th><th>House</th><th>Points</th></tr>
+                </thead>
+                <tbody>
+                  {viewResults.length ? viewResults.map((result) => (
+                    <tr key={result.id}>
+                      <td>{eventLabel(result.event || {})}</td>
+                      <td>{result.position}</td>
+                      <td>{displayStudentName(result.student, result.studentIc)}</td>
+                      <td>{result.student?.className || result.className || '-'}</td>
+                      <td>{result.house || result.student?.house || '-'}</td>
+                      <td>{result.points || 0}</td>
+                    </tr>
+                  )) : (
+                    <tr><td colSpan="6">No results entered yet.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
         {activeTab === 'results' && visibleTabs.includes('results') && accessRole === 'admin' && (
           <section className="results-entry-grid">
             <div className="panel control-panel">
@@ -1546,22 +1617,22 @@ function App() {
                 <h2>{settings.eventTitle} {settings.year}</h2>
                 <h3>{slipEvent ? eventLabel(slipEvent) : 'Choose an event'}</h3>
                 <table>
-                  <thead><tr><th>Place</th><th>Name</th><th>Class</th><th>House</th><th>Points</th></tr></thead>
+                  <thead><tr><th>No. Peserta</th><th>Name</th><th>Class</th><th>House</th><th>Place / Kedudukan</th><th>Record</th></tr></thead>
                   <tbody>
-                    {sortedSlipRegistrations.length ? sortedSlipRegistrations
-                      .map((registration) => {
-                        const student = studentMap.get(registration.studentIc) || {};
+                    {jurySheetRows.length ? jurySheetRows
+                      .map(({ registration, student, participantNo }) => {
                         return (
                           <tr key={registration.id}>
-                            <td>{registration.position || '-'}</td>
+                            <td>{participantNo}</td>
                             <td>{displayStudentName(student, registration.studentIc)}</td>
                             <td>{student.className || registration.className}</td>
                             <td>{registration.house || student.house}</td>
-                            <td>{registration.points || 0}</td>
+                            <td>{registration.position || ''}</td>
+                            <td></td>
                           </tr>
                         );
                       }) : (
-                        <tr><td colSpan="5">No registered students.</td></tr>
+                        <tr><td colSpan="6">No registered students.</td></tr>
                       )}
                   </tbody>
                 </table>

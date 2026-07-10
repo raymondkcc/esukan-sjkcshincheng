@@ -1017,10 +1017,22 @@ td .house {
 
 .slip-paper {
   min-height: 540px;
+  min-width: 820px;
   padding: 28px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-soft);
+}
+
+.slip-paper td:first-child,
+.slip-paper td:nth-child(5) {
+  text-align: center;
+  width: 84px;
+}
+
+.slip-paper td:last-child {
+  min-width: 140px;
+  height: 34px;
 }
 
 .slip-paper h2 {
