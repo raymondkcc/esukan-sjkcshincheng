@@ -120,6 +120,13 @@ const displayStudentName = (student, fallback = '') => {
   const names = [student?.name, student?.chineseName].map((value) => String(value || '').trim()).filter(Boolean);
   return names.length ? names.join(' / ') : fallback;
 };
+const normalizeGender = (value) => {
+  const text = String(value || '').trim();
+  const key = text.toLocaleUpperCase('ms-MY');
+  if (['L', 'LELAKI', 'MALE', 'BOY'].includes(key)) return 'Lelaki';
+  if (['P', 'PEREMPUAN', 'FEMALE', 'GIRL'].includes(key)) return 'Perempuan';
+  return text;
+};
 const getYear = (className) => {
   const match = String(className || '').match(/[1-6]/);
   return match ? Number(match[0]) : 0;
@@ -265,14 +272,14 @@ function App() {
   const filteredStudents = students.filter((student) => {
     const query = studentQuery.trim().toLowerCase();
     if (!query) return true;
-    return [student.name, student.chineseName, student.className, student.house].some((value) =>
+    return [student.name, student.chineseName, student.className, student.gender, student.house].some((value) =>
       String(value || '').toLowerCase().includes(query),
     );
   });
 
   const registerCandidates = students.filter((student) => {
     const query = registerQuery.trim().toLowerCase();
-    const matchesQuery = !query || [student.name, student.chineseName, student.className, student.house].some((value) =>
+    const matchesQuery = !query || [student.name, student.chineseName, student.className, student.gender, student.house].some((value) =>
       String(value || '').toLowerCase().includes(query),
     );
     const matchesHouse = !registerHouse || houseMatchKey(student.house) === houseMatchKey(registerHouse);
@@ -383,10 +390,10 @@ function App() {
   const downloadTemplate = async () => {
     const XLSX = await import('xlsx');
     const worksheet = XLSX.utils.json_to_sheet([
-      { Name: 'Ali Bin Abu', '姓名': '', Kelas: '4M', 'Rumah Sukan / House': houses[0] || '红B组' },
-      { Name: 'Tan Mei Ling', '姓名': '陈美玲', Kelas: '5B', 'Rumah Sukan / House': houses[1] || '黄A组' },
+      { Name: 'Ali Bin Abu', '姓名': '', Kelas: '4M', 'Rumah Sukan / House': houses[0] || '红B组', 'Jantina/Gender': 'Lelaki' },
+      { Name: 'Tan Mei Ling', '姓名': '陈美玲', Kelas: '5B', 'Rumah Sukan / House': houses[1] || '黄A组', 'Jantina/Gender': 'Perempuan' },
     ]);
-    worksheet['!cols'] = [{ wch: 28 }, { wch: 18 }, { wch: 12 }, { wch: 22 }];
+    worksheet['!cols'] = [{ wch: 28 }, { wch: 18 }, { wch: 12 }, { wch: 22 }, { wch: 18 }];
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Student Namelist');
     XLSX.writeFile(workbook, `e-sukan-template-${settings.year}.xlsx`);
@@ -410,6 +417,7 @@ function App() {
           chineseName: getCell(row, ['姓名', 'chinese name', 'nama cina']),
           className: getCell(row, ['kelas', 'class', 'class name']),
           house: normalizeHouse(getCell(row, ['rumah sukan / house', 'rumah sukan', 'rumah', 'house'])),
+          gender: normalizeGender(getCell(row, ['jantina/gender', 'jantina', 'gender', 'sex'])),
         };
         const studentKey = buildStudentKey(student);
         return {
@@ -418,10 +426,10 @@ function App() {
           studentKey,
         };
       })
-      .filter((student) => student.studentKey && student.name && student.className && student.house);
+      .filter((student) => student.studentKey && student.name && student.className && student.house && student.gender);
 
     if (!validStudents.length) {
-      setNotice('No valid rows. Required columns: Name, Kelas, Rumah Sukan / House.');
+      setNotice('No valid rows. Required columns: Name, Kelas, Rumah Sukan / House, Jantina/Gender.');
       return;
     }
 
@@ -830,15 +838,15 @@ function App() {
               </button>
               <label>
                 Search
-                <input value={studentQuery} onChange={(event) => setStudentQuery(event.target.value)} placeholder="Name, 姓名, kelas, house" />
+                <input value={studentQuery} onChange={(event) => setStudentQuery(event.target.value)} placeholder="Name, 姓名, kelas, gender, house" />
               </label>
-              <p className="help-text">Required columns: Name, Kelas, Rumah Sukan / House. Optional column: 姓名. Houses are updated from the uploaded template.</p>
+              <p className="help-text">Required columns: Name, Kelas, Rumah Sukan / House, Jantina/Gender. Use Lelaki/Male/Boy or Perempuan/Female/Girl. Optional column: 姓名.</p>
             </div>
 
             <div className="panel table-panel">
               <table>
                 <thead>
-                  <tr><th>Name</th><th>姓名</th><th>Kelas</th><th>House</th></tr>
+                  <tr><th>Name</th><th>姓名</th><th>Kelas</th><th>Gender</th><th>House</th></tr>
                 </thead>
                 <tbody>
                   {filteredStudents.map((student) => (
@@ -846,6 +854,7 @@ function App() {
                       <td>{student.name}</td>
                       <td>{student.chineseName || '-'}</td>
                       <td>{student.className}</td>
+                      <td>{student.gender || '-'}</td>
                       <td><span className={houseClassName(student.house)}>{student.house}</span></td>
                     </tr>
                   ))}
@@ -956,7 +965,7 @@ function App() {
               </label>
               <label>
                 Search
-                <input value={registerQuery} onChange={(event) => setRegisterQuery(event.target.value)} placeholder="Name, 姓名, kelas" />
+                <input value={registerQuery} onChange={(event) => setRegisterQuery(event.target.value)} placeholder="Name, 姓名, kelas, gender" />
               </label>
               <label>
                 House
@@ -981,7 +990,7 @@ function App() {
                       <button className={selected ? 'picker-row selected' : 'picker-row'} key={studentKey} type="button" onClick={() => toggleRegistration(student)}>
                         <span>
                           <strong>{displayStudentName(student)}</strong>
-                          <small>{student.className} - {student.house}</small>
+                          <small>{student.className} - {student.gender || '-'} - {student.house}</small>
                         </span>
                         <b>{selected ? 'IN' : '+'}</b>
                       </button>
@@ -996,7 +1005,7 @@ function App() {
                         <div className="registered-top">
                           <div>
                             <strong>{displayStudentName(student, registration.studentIc)}</strong>
-                            <small>{student.className || registration.className} - {registration.house}</small>
+                            <small>{student.className || registration.className} - {student.gender || '-'} - {registration.house}</small>
                           </div>
                           <button className="position clear" type="button" onClick={() => toggleRegistration({ ...student, ic: registration.studentIc })}>Remove</button>
                         </div>
@@ -1043,7 +1052,7 @@ function App() {
                     <div className="registered-top">
                       <div>
                         <strong>{displayStudentName(student, registration.studentIc)}</strong>
-                        <small>{student.className || registration.className} - {registration.house}</small>
+                        <small>{student.className || registration.className} - {student.gender || '-'} - {registration.house}</small>
                       </div>
                       <b>{registration.points || 0}</b>
                     </div>
