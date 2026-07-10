@@ -701,8 +701,8 @@ function App() {
             <div className="panel scoreboard-panel live-board-surface" ref={liveBoardRef}>
               <div className="section-head">
                 <div>
-                  <p className="eyebrow">Auto updates</p>
-                  <h2>Total Marks</h2>
+                  <p className="eyebrow">{settings.schoolName || 'SJKC Shin Cheng'}</p>
+                  <h2>Papan Markah Kejohanan Sukan Tahunan</h2>
                 </div>
                 <button className="icon-button" type="button" onClick={openFullscreen} title="Fullscreen">
                   <Maximize2 size={18} />
