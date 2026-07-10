@@ -50,6 +50,7 @@ const DEFAULT_SETTINGS = {
   maxKumpulanTahap2: 2,
   maxTarikTaliPerHouseYear: 4,
 };
+const SCHOOL_LOGO_PATH = '/logo-sjkc-shin-cheng.png';
 const DEFAULT_EVENT_FORM = {
   startNo: 1,
   baseName: '',
@@ -696,10 +697,13 @@ function App() {
   return (
     <div className={`app-shell theme-${theme}`}>
       <header className="topbar">
-        <div>
-          <p className="eyebrow">{settings.schoolName}</p>
-          <h1>{settings.eventTitle}</h1>
-          <p className="subtle">Realtime score management for sports day</p>
+        <div className="brand-lockup">
+          <img className="site-logo" src={SCHOOL_LOGO_PATH} alt={`${settings.schoolName || DEFAULT_SETTINGS.schoolName} logo`} />
+          <div>
+            <p className="eyebrow">{settings.schoolName}</p>
+            <h1>{settings.eventTitle}</h1>
+            <p className="subtle">Realtime score management for sports day</p>
+          </div>
         </div>
         <div className="top-actions">
           {tabs.length > 1 ? (
@@ -751,9 +755,12 @@ function App() {
           <section className={settings.liveBoardMode === 'total-only' ? 'live-grid total-only' : 'live-grid'}>
             <div className="panel scoreboard-panel live-board-surface" ref={liveBoardRef}>
               <div className="section-head">
-                <div>
-                  <p className="eyebrow">{liveBoardHeaderSchool}</p>
-                  <h2>{liveBoardHeaderTitle}</h2>
+                <div className="live-board-title">
+                  <img className="live-board-logo" src={SCHOOL_LOGO_PATH} alt={`${liveBoardHeaderSchool} logo`} />
+                  <div>
+                    <p className="eyebrow">{liveBoardHeaderSchool}</p>
+                    <h2>{liveBoardHeaderTitle}</h2>
+                  </div>
                 </div>
                 <button className="icon-button" type="button" onClick={openFullscreen} title="Fullscreen">
                   <Maximize2 size={18} />
