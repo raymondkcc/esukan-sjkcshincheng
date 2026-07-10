@@ -34,7 +34,9 @@ const DEFAULT_HOUSES = ['红B组', '黄A组', '红A组', '青B组', '蓝A组', '
 const CATEGORY_ORDER = [
   'L1', 'P1', 'L2', 'P2', 'L3', 'P3',
   'L4', 'P4', 'L5', 'P5', 'L6', 'P6',
+  'Tahap 1 (L)', 'Tahap 1 (P)', 'Tahap 1 (Terbuka)',
   'Tahap Dua (L)', 'Tahap Dua (P)', 'Tahap Dua (Campuran)',
+  'Tahap 2 (Terbuka)',
   'Terbuka L', 'Terbuka P', 'Ibu Bapa', 'Guru',
 ];
 const DEFAULT_SETTINGS = {
