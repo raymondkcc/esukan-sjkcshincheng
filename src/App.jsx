@@ -97,7 +97,6 @@ const hasFirebaseConfig = Boolean(
 const firebaseApp = hasFirebaseConfig ? initializeApp(firebaseConfig) : null;
 const db = firebaseApp ? getFirestore(firebaseApp) : null;
 
-const normalizeIc = (value) => String(value || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 const normalizeHouse = (value) => String(value || '').trim();
 const houseMatchKey = (value) => normalizeHouse(value).toLocaleUpperCase('ms-MY');
 const splitHouseList = (value) => String(value || '')
@@ -105,6 +104,22 @@ const splitHouseList = (value) => String(value || '')
   .map(normalizeHouse)
   .filter(Boolean);
 const sortByName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''));
+const hashString = (value) => {
+  let hash = 0;
+  String(value || '').split('').forEach((character) => {
+    hash = Math.imul(31, hash) + character.charCodeAt(0) | 0;
+  });
+  return Math.abs(hash).toString(36);
+};
+const buildStudentKey = ({ name, chineseName, className }) => {
+  const source = [className, name, chineseName].map((value) => String(value || '').trim()).join('|');
+  return source.replace(/\|/g, '') ? `student-${hashString(source)}` : '';
+};
+const getStudentKey = (student) => String(student?.ic || student?.studentKey || student?.id || '').trim();
+const displayStudentName = (student, fallback = '') => {
+  const names = [student?.name, student?.chineseName].map((value) => String(value || '').trim()).filter(Boolean);
+  return names.length ? names.join(' / ') : fallback;
+};
 const getYear = (className) => {
   const match = String(className || '').match(/[1-6]/);
   return match ? Number(match[0]) : 0;
@@ -227,7 +242,7 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [notice]);
 
-  const studentMap = useMemo(() => new Map(students.map((student) => [student.ic, student])), [students]);
+  const studentMap = useMemo(() => new Map(students.map((student) => [getStudentKey(student), student])), [students]);
   const eventMap = useMemo(() => new Map(events.map((event) => [event.id, event])), [events]);
   const registerEvent = eventMap.get(registerEventId);
   const resultEvent = eventMap.get(resultEventId);
@@ -245,19 +260,19 @@ function App() {
   const registrationsForRegisterEvent = eventRegistrations.get(registerEventId) || [];
   const registrationsForResultEvent = eventRegistrations.get(resultEventId) || [];
   const registrationsForSlipEvent = eventRegistrations.get(slipEventId) || [];
-  const registeredIcSet = new Set(registrationsForRegisterEvent.map((item) => item.studentIc));
+  const registeredStudentSet = new Set(registrationsForRegisterEvent.map((item) => item.studentIc));
 
   const filteredStudents = students.filter((student) => {
     const query = studentQuery.trim().toLowerCase();
     if (!query) return true;
-    return [student.name, student.className, student.ic, student.house].some((value) =>
+    return [student.name, student.chineseName, student.className, student.house].some((value) =>
       String(value || '').toLowerCase().includes(query),
     );
   });
 
   const registerCandidates = students.filter((student) => {
     const query = registerQuery.trim().toLowerCase();
-    const matchesQuery = !query || [student.name, student.className, student.ic, student.house].some((value) =>
+    const matchesQuery = !query || [student.name, student.chineseName, student.className, student.house].some((value) =>
       String(value || '').toLowerCase().includes(query),
     );
     const matchesHouse = !registerHouse || houseMatchKey(student.house) === houseMatchKey(registerHouse);
@@ -368,10 +383,10 @@ function App() {
   const downloadTemplate = async () => {
     const XLSX = await import('xlsx');
     const worksheet = XLSX.utils.json_to_sheet([
-      { Name: 'Ali Bin Abu', Class: '4M', IC: '120101010001', 'Rumah Sukan': houses[0] || 'MERAH' },
-      { Name: 'Tan Mei Ling', Class: '5B', IC: '120202020002', 'Rumah Sukan': houses[1] || 'BIRU' },
+      { Name: 'Ali Bin Abu', '姓名': '', Kelas: '4M', 'Rumah Sukan / House': houses[0] || '红B组' },
+      { Name: 'Tan Mei Ling', '姓名': '陈美玲', Kelas: '5B', 'Rumah Sukan / House': houses[1] || '黄A组' },
     ]);
-    worksheet['!cols'] = [{ wch: 28 }, { wch: 12 }, { wch: 18 }, { wch: 18 }];
+    worksheet['!cols'] = [{ wch: 28 }, { wch: 18 }, { wch: 12 }, { wch: 22 }];
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Student Namelist');
     XLSX.writeFile(workbook, `e-sukan-template-${settings.year}.xlsx`);
@@ -389,29 +404,47 @@ function App() {
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
     const validStudents = rows
-      .map((row) => ({
-        ic: normalizeIc(getCell(row, ['ic', 'no ic', 'no. ic', 'kad pengenalan', 'identity card'])),
-        name: getCell(row, ['name', 'nama', 'nama murid']),
-        className: getCell(row, ['class', 'kelas', 'class name']),
-        house: normalizeHouse(getCell(row, ['rumah sukan', 'rumah', 'house'])),
-      }))
-      .filter((student) => student.ic && student.name && student.className && student.house);
+      .map((row) => {
+        const student = {
+          name: getCell(row, ['name', 'nama', 'nama murid']),
+          chineseName: getCell(row, ['姓名', 'chinese name', 'nama cina']),
+          className: getCell(row, ['kelas', 'class', 'class name']),
+          house: normalizeHouse(getCell(row, ['rumah sukan / house', 'rumah sukan', 'rumah', 'house'])),
+        };
+        const studentKey = buildStudentKey(student);
+        return {
+          ...student,
+          ic: studentKey,
+          studentKey,
+        };
+      })
+      .filter((student) => student.studentKey && student.name && student.className && student.house);
 
     if (!validStudents.length) {
-      setNotice('No valid rows. Required columns: Name, Class, IC, Rumah Sukan.');
+      setNotice('No valid rows. Required columns: Name, Kelas, Rumah Sukan / House.');
       return;
     }
 
     const batch = writeBatch(db);
+    const importedHouses = [];
+    const importedHouseKeys = new Set();
     validStudents.forEach((student) => {
-      batch.set(doc(refs.students, student.ic), {
+      const houseKey = houseMatchKey(student.house);
+      if (houseKey && !importedHouseKeys.has(houseKey)) {
+        importedHouseKeys.add(houseKey);
+        importedHouses.push(student.house);
+      }
+      batch.set(doc(refs.students, student.studentKey), {
         ...student,
         updatedAt: serverTimestamp(),
       }, { merge: true });
     });
+    if (importedHouses.length) {
+      batch.set(refs.settings, { houses: importedHouses, updatedAt: serverTimestamp() }, { merge: true });
+    }
     await batch.commit();
     if (fileInputRef.current) fileInputRef.current.value = '';
-    setNotice(`${validStudents.length} students imported.`);
+    setNotice(`${validStudents.length} students imported. Houses updated from template.`);
   };
 
   const getRegistrationBlockReason = (event, eventList, student) => {
@@ -434,8 +467,9 @@ function App() {
       }
     }
 
+    const studentKey = getStudentKey(student);
     const existingEvents = registrations
-      .filter((registration) => registration.studentIc === student.ic && registration.eventId !== event.id)
+      .filter((registration) => registration.studentIc === studentKey && registration.eventId !== event.id)
       .map((registration) => eventMap.get(registration.eventId))
       .filter(Boolean);
     const currentIndividu = existingEvents.filter((item) => String(item.type || '').toUpperCase().includes('INDIVIDU')).length;
@@ -462,8 +496,13 @@ function App() {
       return;
     }
 
-    const id = `${registerEvent.id}_${student.ic}`;
-    if (registeredIcSet.has(student.ic)) {
+    const studentKey = getStudentKey(student);
+    if (!studentKey) {
+      setNotice('Student record is missing its generated key.');
+      return;
+    }
+    const id = `${registerEvent.id}_${studentKey}`;
+    if (registeredStudentSet.has(studentKey)) {
       await deleteDoc(doc(refs.registrations, id));
       return;
     }
@@ -476,7 +515,7 @@ function App() {
 
     await setDoc(doc(refs.registrations, id), {
       eventId: registerEvent.id,
-      studentIc: student.ic,
+      studentIc: studentKey,
       house: student.house,
       className: student.className,
       position: '',
@@ -540,7 +579,7 @@ function App() {
         return `
           <tr>
             <td>${registration.position || ''}</td>
-            <td>${student.name || registration.studentIc}</td>
+            <td>${displayStudentName(student, registration.studentIc)}</td>
             <td>${student.className || registration.className || ''}</td>
             <td>${registration.house || student.house || ''}</td>
             <td>${registration.points || 0}</td>
@@ -761,7 +800,7 @@ function App() {
                 {latestResults.length ? latestResults.map((result) => (
                   <div className="result-row" key={result.id}>
                     <div>
-                      <strong>{result.student?.name || result.studentIc}</strong>
+                      <strong>{displayStudentName(result.student, result.studentIc)}</strong>
                       <span>{result.event?.name || 'Event'} ({result.event?.category || '-'})</span>
                     </div>
                     <b>{result.points || 0}</b>
@@ -791,22 +830,22 @@ function App() {
               </button>
               <label>
                 Search
-                <input value={studentQuery} onChange={(event) => setStudentQuery(event.target.value)} placeholder="Name, class, IC, house" />
+                <input value={studentQuery} onChange={(event) => setStudentQuery(event.target.value)} placeholder="Name, 姓名, kelas, house" />
               </label>
-              <p className="help-text">Required columns: Name, Class, IC, Rumah Sukan. IC is used as the student key.</p>
+              <p className="help-text">Required columns: Name, Kelas, Rumah Sukan / House. Optional column: 姓名. Houses are updated from the uploaded template.</p>
             </div>
 
             <div className="panel table-panel">
               <table>
                 <thead>
-                  <tr><th>Name</th><th>Class</th><th>IC</th><th>House</th></tr>
+                  <tr><th>Name</th><th>姓名</th><th>Kelas</th><th>House</th></tr>
                 </thead>
                 <tbody>
                   {filteredStudents.map((student) => (
-                    <tr key={student.ic}>
+                    <tr key={getStudentKey(student)}>
                       <td>{student.name}</td>
+                      <td>{student.chineseName || '-'}</td>
                       <td>{student.className}</td>
-                      <td className="mono">{student.ic}</td>
                       <td><span className={houseClassName(student.house)}>{student.house}</span></td>
                     </tr>
                   ))}
@@ -917,7 +956,7 @@ function App() {
               </label>
               <label>
                 Search
-                <input value={registerQuery} onChange={(event) => setRegisterQuery(event.target.value)} placeholder="Name, class, IC" />
+                <input value={registerQuery} onChange={(event) => setRegisterQuery(event.target.value)} placeholder="Name, 姓名, kelas" />
               </label>
               <label>
                 House
@@ -936,11 +975,12 @@ function App() {
               <div className="entry-columns">
                 <div className="student-picker">
                   {registerCandidates.map((student) => {
-                    const selected = registeredIcSet.has(student.ic);
+                    const studentKey = getStudentKey(student);
+                    const selected = registeredStudentSet.has(studentKey);
                     return (
-                      <button className={selected ? 'picker-row selected' : 'picker-row'} key={student.ic} type="button" onClick={() => toggleRegistration(student)}>
+                      <button className={selected ? 'picker-row selected' : 'picker-row'} key={studentKey} type="button" onClick={() => toggleRegistration(student)}>
                         <span>
-                          <strong>{student.name}</strong>
+                          <strong>{displayStudentName(student)}</strong>
                           <small>{student.className} - {student.house}</small>
                         </span>
                         <b>{selected ? 'IN' : '+'}</b>
@@ -955,7 +995,7 @@ function App() {
                       <div className="registered-row" key={registration.id}>
                         <div className="registered-top">
                           <div>
-                            <strong>{student.name || registration.studentIc}</strong>
+                            <strong>{displayStudentName(student, registration.studentIc)}</strong>
                             <small>{student.className || registration.className} - {registration.house}</small>
                           </div>
                           <button className="position clear" type="button" onClick={() => toggleRegistration({ ...student, ic: registration.studentIc })}>Remove</button>
@@ -1002,7 +1042,7 @@ function App() {
                   <div className="registered-row" key={registration.id}>
                     <div className="registered-top">
                       <div>
-                        <strong>{student.name || registration.studentIc}</strong>
+                        <strong>{displayStudentName(student, registration.studentIc)}</strong>
                         <small>{student.className || registration.className} - {registration.house}</small>
                       </div>
                       <b>{registration.points || 0}</b>
@@ -1057,7 +1097,7 @@ function App() {
                         return (
                           <tr key={registration.id}>
                             <td>{registration.position}</td>
-                            <td>{student.name || registration.studentIc}</td>
+                            <td>{displayStudentName(student, registration.studentIc)}</td>
                             <td>{student.className || registration.className}</td>
                             <td>{registration.house || student.house}</td>
                             <td>{registration.points || 0}</td>
