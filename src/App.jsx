@@ -233,6 +233,13 @@ function App() {
   const visibleTabs = ACCESS_LEVELS[accessRole]?.tabs || ACCESS_LEVELS.user.tabs;
   const loading = !Object.values(loadedSections).every(Boolean);
   const nextEventNo = useMemo(() => Math.max(0, ...events.map((event) => Number(event.no || 0))) + 1, [events]);
+  const runScoreTransition = (callback) => {
+    if (typeof document === 'undefined' || typeof document.startViewTransition !== 'function' || document.visibilityState !== 'visible') {
+      callback();
+      return;
+    }
+    document.startViewTransition(callback).finished.catch(() => {});
+  };
 
   useEffect(() => {
     localStorage.setItem('esukan-theme', theme);
@@ -286,7 +293,8 @@ function App() {
         markLoaded('events');
       }, (error) => handleSnapshotError('events', error)),
       onSnapshot(refs.registrations, (snapshot) => {
-        setRegistrations(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })));
+        const nextRegistrations = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+        runScoreTransition(() => setRegistrations(nextRegistrations));
         markLoaded('registrations');
       }, (error) => handleSnapshotError('registrations', error)),
     ];
@@ -1125,10 +1133,10 @@ function App() {
               </div>
               <div className="score-list">
                 {scoreData.houses.map((house, index) => {
-                  const maxScore = Math.max(...scoreData.houses.map((item) => item.total), 100);
-                  const width = Math.max((house.total / maxScore) * 100, 10);
+                  const maxScore = Math.max(...scoreData.houses.map((item) => item.total), 1);
+                  const width = house.total > 0 ? Math.max((house.total / maxScore) * 100, 8) : 0;
                   return (
-                    <div className="score-row" key={house.name}>
+                    <div className="score-row" key={house.name} style={{ viewTransitionName: `score-row-${hashString(house.name)}` }}>
                       <div className="rank">{index + 1}</div>
                       <div className="score-track">
                         <div className={houseClassName(house.name)} style={{ width: `${width}%` }}>{house.name}</div>

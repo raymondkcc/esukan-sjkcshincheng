@@ -11,6 +11,22 @@
   box-sizing: border-box;
 }
 
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-group(*) {
+  animation-duration: 720ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*) {
+    animation-duration: 1ms;
+  }
+}
+
 body {
   min-width: 320px;
   min-height: 100vh;
@@ -578,7 +594,7 @@ button {
 }
 
 .house {
-  min-width: max-content;
+  min-width: min(220px, 100%);
   height: 100%;
   border: 2px solid transparent;
   display: flex;
