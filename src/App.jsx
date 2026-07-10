@@ -42,6 +42,8 @@ const DEFAULT_SETTINGS = {
   year: new Date().getFullYear(),
   houses: DEFAULT_HOUSES,
   liveBoardMode: 'total-only',
+  liveBoardHeaderSchool: '',
+  liveBoardHeaderTitle: 'Papan Markah Kejohanan Sukan Tahunan',
   maxIndividuTahap1: 2,
   maxIndividuTahap2: 3,
   maxKumpulanTahap1: 1,
@@ -175,6 +177,8 @@ function App() {
     const source = Array.isArray(settings.houses) ? settings.houses : DEFAULT_HOUSES;
     return source.map(normalizeHouse).filter(Boolean);
   }, [settings.houses]);
+  const liveBoardHeaderSchool = String(settings.liveBoardHeaderSchool || settings.schoolName || DEFAULT_SETTINGS.schoolName).trim();
+  const liveBoardHeaderTitle = String(settings.liveBoardHeaderTitle || DEFAULT_SETTINGS.liveBoardHeaderTitle).trim();
   const visibleTabs = ACCESS_LEVELS[accessRole]?.tabs || ACCESS_LEVELS.user.tabs;
 
   useEffect(() => {
@@ -701,8 +705,8 @@ function App() {
             <div className="panel scoreboard-panel live-board-surface" ref={liveBoardRef}>
               <div className="section-head">
                 <div>
-                  <p className="eyebrow">{settings.schoolName || 'SJKC Shin Cheng'}</p>
-                  <h2>Papan Markah Kejohanan Sukan Tahunan</h2>
+                  <p className="eyebrow">{liveBoardHeaderSchool}</p>
+                  <h2>{liveBoardHeaderTitle}</h2>
                 </div>
                 <button className="icon-button" type="button" onClick={openFullscreen} title="Fullscreen">
                   <Maximize2 size={18} />
@@ -1088,6 +1092,8 @@ function App() {
                   <option value="total-and-class">Total marks + class marks</option>
                 </select>
               </label>
+              <label>Live board small header<input placeholder={settings.schoolName || DEFAULT_SETTINGS.schoolName} value={settings.liveBoardHeaderSchool || ''} onChange={(event) => setSettings({ ...settings, liveBoardHeaderSchool: event.target.value })} /></label>
+              <label>Live board main title<input placeholder={DEFAULT_SETTINGS.liveBoardHeaderTitle} value={settings.liveBoardHeaderTitle || ''} onChange={(event) => setSettings({ ...settings, liveBoardHeaderTitle: event.target.value })} /></label>
               <button className="primary-button" type="button" onClick={saveSettings}><Save size={16} /> Save Settings</button>
             </div>
 
