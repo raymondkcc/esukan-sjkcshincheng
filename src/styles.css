@@ -594,7 +594,7 @@ button {
 }
 
 .house {
-  min-width: min(220px, 100%);
+  min-width: 0;
   height: 100%;
   border: 2px solid transparent;
   display: flex;
@@ -605,6 +605,7 @@ button {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   transition: width 700ms ease;
+  white-space: nowrap;
 }
 
 .house.red { background: #dc2626; border-color: #f87171; }
@@ -1194,6 +1195,12 @@ td .house {
 
   .score-number {
     font-size: 1.8rem;
+  }
+
+  .house {
+    padding-inline: 8px;
+    font-size: 0.78rem;
+    letter-spacing: 0.02em;
   }
 
   .rank {
