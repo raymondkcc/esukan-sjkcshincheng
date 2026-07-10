@@ -372,11 +372,32 @@ button {
 
 .live-board-surface:fullscreen .section-head h2 {
   font-size: clamp(1.8rem, 4vw, 4.4rem);
+  text-align: center;
 }
 
 .live-board-surface:fullscreen .section-head {
+  position: relative;
   flex: 0 0 auto;
+  justify-content: center;
   margin-bottom: clamp(10px, 2vh, 22px);
+  text-align: center;
+}
+
+.live-board-surface:fullscreen .section-head > div {
+  width: min(100%, 72vw);
+}
+
+.live-board-surface:fullscreen .eyebrow {
+  margin-bottom: clamp(6px, 1vh, 14px);
+  font-size: clamp(1.15rem, 2vw, 2.4rem);
+  letter-spacing: 0.12em;
+}
+
+.live-board-surface:fullscreen .section-head .icon-button {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
 }
 
 .live-board-surface:fullscreen .score-list {
