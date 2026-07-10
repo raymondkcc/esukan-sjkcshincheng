@@ -13,8 +13,10 @@ import {
 import {
   Activity,
   ClipboardList,
+  ChevronDown,
   Download,
   FileSpreadsheet,
+  Languages,
   Maximize2,
   Medal,
   Monitor,
@@ -81,6 +83,208 @@ const ACCESS_LEVELS = {
   admin: {
     label: 'Admin',
     tabs: ['live', 'viewResults', 'students', 'events', 'register', 'results', 'slips', 'settings'],
+  },
+};
+const LANGUAGE_OPTIONS = [
+  { id: 'ms', short: 'BM', label: 'Bahasa Melayu' },
+  { id: 'en', short: 'EN', label: 'English' },
+  { id: 'zh', short: '中文', label: '中文' },
+];
+const TEXT = {
+  ms: {
+    liveBoard: 'Papan Markah',
+    viewResults: 'Lihat Keputusan',
+    students: 'Murid',
+    events: 'Acara',
+    register: 'Daftar',
+    resultsEntry: 'Masuk Keputusan',
+    slips: 'Slip',
+    settings: 'Tetapan',
+    liveView: 'Paparan Langsung',
+    teacher: 'Guru',
+    admin: 'Admin',
+    loadingTitle: 'Memuat data e-Sukan',
+    loadingHelp: 'Sila tunggu sementara Firebase memuat tetapan, murid, acara dan markah.',
+    toggleTheme: 'Tukar tema',
+    changeLanguage: 'Tukar bahasa',
+    fullscreen: 'Skrin penuh',
+    latest: 'Terkini',
+    results: 'Keputusan',
+    classMarks: 'Markah Kelas',
+    optional: 'Pilihan',
+    noResults: 'Belum ada keputusan.',
+    readonly: 'Baca sahaja',
+    completed: 'Siap',
+    resultEvents: 'Acara',
+    viewHelp: 'Halaman ini hanya memaparkan keputusan yang telah dimasukkan. Kemasukan keputusan masih untuk admin sahaja.',
+    event: 'Acara',
+    allEvents: 'Semua acara',
+    quickEvent: 'Cari cepat acara',
+    place: 'Tempat',
+    name: 'Nama',
+    class: 'Kelas',
+    house: 'Rumah',
+    points: 'Markah',
+    official: 'Rasmi',
+    resultSlip: 'Slip Keputusan',
+    chooseEvent: 'Pilih acara',
+    registered: 'Berdaftar',
+    completedResults: 'Keputusan siap',
+    generateSlip: 'Jana Slip',
+    printSelected: 'Cetak Acara Dipilih',
+    bulkPrint: 'Cetak pukal',
+    selected: 'Dipilih',
+    selectAll: 'Pilih semua',
+    clear: 'Kosongkan',
+    noRegistered: 'Tiada peserta berdaftar.',
+    participantNo: 'No. Peserta',
+    record: 'Rekod',
+    position: 'Kedudukan',
+    preparedBy: 'Disediakan oleh',
+    confirmedBy: 'Disahkan oleh',
+    olahragawanTitle: 'Olahragawan / Olahragawati',
+    olahragawan: 'Olahragawan',
+    olahragawati: 'Olahragawati',
+    medals: 'Pingat',
+    noMedals: 'Belum ada pingat.',
+    gold: 'Emas',
+    silver: 'Perak',
+    bronze: 'Gangsa',
+    expand: 'Buka',
+    collapse: 'Tutup',
+    houseEntry: 'Penyertaan rumah',
+    student: 'Murid',
+    print: 'Cetak',
+  },
+  en: {
+    liveBoard: 'Live Board',
+    viewResults: 'View Results',
+    students: 'Students',
+    events: 'Events',
+    register: 'Register',
+    resultsEntry: 'Results Entry',
+    slips: 'Slips',
+    settings: 'Settings',
+    liveView: 'Live View',
+    teacher: 'Teacher',
+    admin: 'Admin',
+    loadingTitle: 'Loading e-Sukan data',
+    loadingHelp: 'Please wait while Firebase loads settings, students, events, and scores.',
+    toggleTheme: 'Toggle theme',
+    changeLanguage: 'Change language',
+    fullscreen: 'Fullscreen',
+    latest: 'Latest',
+    results: 'Results',
+    classMarks: 'Class Marks',
+    optional: 'Optional',
+    noResults: 'No results entered yet.',
+    readonly: 'Readonly',
+    completed: 'Completed',
+    resultEvents: 'Events',
+    viewHelp: 'This page only shows keyed-in results. Result entry remains admin-only.',
+    event: 'Event',
+    allEvents: 'All events',
+    quickEvent: 'Quick event search',
+    place: 'Place',
+    name: 'Name',
+    class: 'Class',
+    house: 'House',
+    points: 'Points',
+    official: 'Official',
+    resultSlip: 'Result Slip',
+    chooseEvent: 'Choose event',
+    registered: 'Registered',
+    completedResults: 'Completed results',
+    generateSlip: 'Generate Slip',
+    printSelected: 'Print Selected Events',
+    bulkPrint: 'Bulk print',
+    selected: 'Selected',
+    selectAll: 'Select all',
+    clear: 'Clear',
+    noRegistered: 'No registered students.',
+    participantNo: 'Participant No.',
+    record: 'Record',
+    position: 'Position',
+    preparedBy: 'Prepared by',
+    confirmedBy: 'Confirmed by',
+    olahragawanTitle: 'Olahragawan / Olahragawati',
+    olahragawan: 'Top male athlete',
+    olahragawati: 'Top female athlete',
+    medals: 'Medals',
+    noMedals: 'No medals yet.',
+    gold: 'Gold',
+    silver: 'Silver',
+    bronze: 'Bronze',
+    expand: 'Expand',
+    collapse: 'Collapse',
+    houseEntry: 'House entry',
+    student: 'Student',
+    print: 'Print',
+  },
+  zh: {
+    liveBoard: '即时积分榜',
+    viewResults: '查看成绩',
+    students: '学生',
+    events: '项目',
+    register: '报名',
+    resultsEntry: '录入成绩',
+    slips: '成绩单',
+    settings: '设置',
+    liveView: '即时画面',
+    teacher: '教师',
+    admin: '管理员',
+    loadingTitle: '正在载入 e-Sukan 数据',
+    loadingHelp: '请稍候，Firebase 正在载入设置、学生、项目和分数。',
+    toggleTheme: '切换主题',
+    changeLanguage: '切换语言',
+    fullscreen: '全屏',
+    latest: '最新',
+    results: '成绩',
+    classMarks: '班级分数',
+    optional: '选项',
+    noResults: '还没有录入成绩。',
+    readonly: '只读',
+    completed: '已完成',
+    resultEvents: '项目',
+    viewHelp: '此页面只显示已录入的成绩。成绩录入仍限管理员使用。',
+    event: '项目',
+    allEvents: '全部项目',
+    quickEvent: '快速选择项目',
+    place: '名次',
+    name: '姓名',
+    class: '班级',
+    house: '运动组',
+    points: '分数',
+    official: '正式',
+    resultSlip: '成绩单',
+    chooseEvent: '选择项目',
+    registered: '已报名',
+    completedResults: '已完成成绩',
+    generateSlip: '生成成绩单',
+    printSelected: '打印所选项目',
+    bulkPrint: '批量打印',
+    selected: '已选',
+    selectAll: '全选',
+    clear: '清除',
+    noRegistered: '没有已报名学生。',
+    participantNo: '参赛号',
+    record: '纪录',
+    position: '名次',
+    preparedBy: '制表',
+    confirmedBy: '确认',
+    olahragawanTitle: '男女最佳运动员',
+    olahragawan: '男子最佳运动员',
+    olahragawati: '女子最佳运动员',
+    medals: '奖牌',
+    noMedals: '还没有奖牌。',
+    gold: '金',
+    silver: '银',
+    bronze: '铜',
+    expand: '展开',
+    collapse: '收起',
+    houseEntry: '运动组项目',
+    student: '学生',
+    print: '打印',
   },
 };
 
@@ -157,6 +361,25 @@ const getCell = (row, names) => {
   return key ? String(row[key] || '').trim() : '';
 };
 const eventLabel = (event) => event ? `${event.no || '-'} - ${event.name} (${event.category || '-'})` : '';
+const eventDisplayName = (event) => {
+  if (!event) return 'Event';
+  const name = String(event.name || event.baseName || '').trim();
+  const category = String(event.category || '').trim();
+  if (!name) return category || 'Event';
+  if (!category || name.toLocaleUpperCase('ms-MY').includes(category.toLocaleUpperCase('ms-MY'))) return name;
+  return `${name} ${category}`;
+};
+const eventPrintTitle = (event) => {
+  if (!event) return 'Event';
+  const title = String(event.name || event.baseName || eventDisplayName(event)).trim();
+  return title || eventDisplayName(event);
+};
+const escapeHtml = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#039;');
 const slugify = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const buildEventName = (baseName, category) => {
   const name = String(baseName || 'Acara').trim();
@@ -190,6 +413,7 @@ function App() {
   const [accessPassword, setAccessPassword] = useState('');
   const [accessError, setAccessError] = useState('');
   const [theme, setTheme] = useState(() => localStorage.getItem('esukan-theme') || 'light');
+  const [language, setLanguage] = useState(() => localStorage.getItem('esukan-language') || 'ms');
   const [loadedSections, setLoadedSections] = useState({ settings: false, students: false, events: false, registrations: false });
   const [uploadingStudents, setUploadingStudents] = useState(false);
   const [notice, setNotice] = useState('');
@@ -211,6 +435,10 @@ function App() {
   const [registerGenderFilter, setRegisterGenderFilter] = useState('');
   const [resultEventId, setResultEventId] = useState('');
   const [slipEventId, setSlipEventId] = useState('');
+  const [selectedSlipEventIds, setSelectedSlipEventIds] = useState([]);
+  const [viewResultEventFilter, setViewResultEventFilter] = useState('');
+  const [expandedLiveResultIds, setExpandedLiveResultIds] = useState({});
+  const [expandedViewResultIds, setExpandedViewResultIds] = useState({});
   const [editingEventId, setEditingEventId] = useState('');
   const [eventEditForm, setEventEditForm] = useState(null);
 
@@ -233,6 +461,8 @@ function App() {
   const visibleTabs = ACCESS_LEVELS[accessRole]?.tabs || ACCESS_LEVELS.user.tabs;
   const loading = !Object.values(loadedSections).every(Boolean);
   const nextEventNo = useMemo(() => Math.max(0, ...events.map((event) => Number(event.no || 0))) + 1, [events]);
+  const currentLanguage = LANGUAGE_OPTIONS.find((item) => item.id === language) || LANGUAGE_OPTIONS[0];
+  const t = (key) => TEXT[language]?.[key] || TEXT.ms[key] || key;
   const runScoreTransition = (callback) => {
     if (typeof document === 'undefined' || typeof document.startViewTransition !== 'function' || document.visibilityState !== 'visible') {
       callback();
@@ -244,6 +474,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('esukan-theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem('esukan-language', language);
+  }, [language]);
 
   useEffect(() => {
     localStorage.setItem('esukan-access-role', accessRole);
@@ -429,6 +663,82 @@ function App() {
         return Number(a.position || 99) - Number(b.position || 99);
       });
   }, [eventMap, registrations, studentMap]);
+  const resultEventOptions = useMemo(() => (
+    Array.from(new Map(viewResults.map((result) => [result.eventId, result.event])).entries())
+      .map(([id, event]) => ({ id, event }))
+      .filter((item) => item.event)
+      .sort((a, b) => {
+        const noCompare = Number(a.event.no || 0) - Number(b.event.no || 0);
+        if (noCompare) return noCompare;
+        return eventDisplayName(a.event).localeCompare(eventDisplayName(b.event), undefined, { numeric: true });
+      })
+  ), [viewResults]);
+  const buildResultGroups = (results, sortMode = 'event') => {
+    const grouped = new Map();
+    results.forEach((result) => {
+      const id = result.eventId || 'unknown';
+      if (!grouped.has(id)) grouped.set(id, { id, event: result.event, results: [], latestMs: 0 });
+      const group = grouped.get(id);
+      group.results.push(result);
+      group.latestMs = Math.max(group.latestMs, Number(result.updatedMs || 0));
+    });
+    return Array.from(grouped.values())
+      .map((group) => ({
+        ...group,
+        results: group.results.sort((a, b) => Number(a.position || 99) - Number(b.position || 99)),
+      }))
+      .sort((a, b) => {
+        if (sortMode === 'latest') return b.latestMs - a.latestMs;
+        const noCompare = Number(a.event?.no || 0) - Number(b.event?.no || 0);
+        if (noCompare) return noCompare;
+        return eventDisplayName(a.event).localeCompare(eventDisplayName(b.event), undefined, { numeric: true });
+      });
+  };
+  const latestResultGroups = useMemo(() => {
+    const latestEventIds = [];
+    latestResults.forEach((result) => {
+      if (result.eventId && !latestEventIds.includes(result.eventId)) latestEventIds.push(result.eventId);
+    });
+    return buildResultGroups(viewResults.filter((result) => latestEventIds.includes(result.eventId)), 'latest');
+  }, [latestResults, viewResults]);
+  const filteredViewResults = useMemo(() => (
+    viewResultEventFilter ? viewResults.filter((result) => result.eventId === viewResultEventFilter) : viewResults
+  ), [viewResultEventFilter, viewResults]);
+  const viewResultGroups = useMemo(() => buildResultGroups(filteredViewResults), [filteredViewResults]);
+  const athleteLeaders = useMemo(() => {
+    const athletes = new Map();
+    registrations.forEach((registration) => {
+      const position = Number(registration.position || 0);
+      if (![1, 2, 3].includes(position) || isHouseEntry(registration)) return;
+      const student = studentMap.get(registration.studentIc);
+      if (!student) return;
+      const studentKey = getStudentKey(student);
+      if (!studentKey) return;
+      if (!athletes.has(studentKey)) {
+        athletes.set(studentKey, {
+          student,
+          gender: normalizeGender(student.gender),
+          gold: 0,
+          silver: 0,
+          bronze: 0,
+        });
+      }
+      const row = athletes.get(studentKey);
+      if (position === 1) row.gold += 1;
+      if (position === 2) row.silver += 1;
+      if (position === 3) row.bronze += 1;
+    });
+    const compareAthletes = (a, b) =>
+      b.gold - a.gold ||
+      b.silver - a.silver ||
+      b.bronze - a.bronze ||
+      displayStudentName(a.student).localeCompare(displayStudentName(b.student));
+    const rows = Array.from(athletes.values()).sort(compareAthletes);
+    return {
+      male: rows.find((row) => row.gender === 'Lelaki') || null,
+      female: rows.find((row) => row.gender === 'Perempuan') || null,
+    };
+  }, [registrations, studentMap]);
   const jurySheetRows = sortedSlipRegistrations
     .map((registration) => ({
       registration,
@@ -911,41 +1221,94 @@ function App() {
     }
   };
 
-  const printResultSlip = () => {
+  const cycleLanguage = () => {
+    const currentIndex = LANGUAGE_OPTIONS.findIndex((item) => item.id === language);
+    const nextLanguage = LANGUAGE_OPTIONS[(currentIndex + 1) % LANGUAGE_OPTIONS.length];
+    setLanguage(nextLanguage.id);
+  };
+
+  const toggleResultGroup = (groupId, target) => {
+    const setter = target === 'live' ? setExpandedLiveResultIds : setExpandedViewResultIds;
+    setter((current) => ({ ...current, [groupId]: !current[groupId] }));
+  };
+
+  const getJuryRowsForEvent = (eventId) => {
+    const eventRows = [...(eventRegistrations.get(eventId) || [])].sort((a, b) => {
+      const positionA = Number(a.position || 99);
+      const positionB = Number(b.position || 99);
+      if (positionA !== positionB) return positionA - positionB;
+      const studentA = studentMap.get(a.studentIc) || {};
+      const studentB = studentMap.get(b.studentIc) || {};
+      const houseCompare = houseMatchKey(a.house || studentA.house).localeCompare(houseMatchKey(b.house || studentB.house));
+      if (houseCompare) return houseCompare;
+      const classCompare = String(studentA.className || a.className || '').localeCompare(String(studentB.className || b.className || ''), undefined, { numeric: true });
+      if (classCompare) return classCompare;
+      return displayEntryName(a, studentA).localeCompare(displayEntryName(b, studentB));
+    });
+    return eventRows.map((registration, index) => ({
+      registration,
+      student: studentMap.get(registration.studentIc) || {},
+      participantNo: index + 1,
+    }));
+  };
+
+  const renderSlipPage = (event) => {
+    const rows = getJuryRowsForEvent(event.id)
+      .map(({ registration, student, participantNo }) => `
+        <tr>
+          <td>${escapeHtml(participantNo)}</td>
+          <td>${escapeHtml(displayEntryName(registration, student))}</td>
+          <td>${escapeHtml(student.className || registration.className || '')}</td>
+          <td>${escapeHtml(registration.house || student.house || '')}</td>
+          <td>${escapeHtml(registration.position || '')}</td>
+          <td></td>
+        </tr>
+      `).join('');
+
+    return `
+      <section class="slip-page">
+        <div class="header">
+          <h1>${escapeHtml(settings.schoolName)}</h1>
+          <h2>${escapeHtml(`${settings.eventTitle} ${settings.year}`)}</h2>
+          <h3>${escapeHtml(eventPrintTitle(event))}</h3>
+          <p>${escapeHtml([event.no ? `No. ${event.no}` : '', event.category || ''].filter(Boolean).join(' - '))}</p>
+        </div>
+        <table>
+          <thead><tr><th>${escapeHtml(t('participantNo'))}</th><th>${escapeHtml(t('name'))}</th><th>${escapeHtml(t('class'))}</th><th>${escapeHtml(t('house'))}</th><th>${escapeHtml(`${t('place')} / ${t('position')}`)}</th><th>${escapeHtml(t('record'))}</th></tr></thead>
+          <tbody>${rows || `<tr><td colspan="6">${escapeHtml(t('noRegistered'))}</td></tr>`}</tbody>
+        </table>
+        <div class="signatures">
+          <div class="line">${escapeHtml(t('preparedBy'))}</div>
+          <div class="line">${escapeHtml(t('confirmedBy'))}</div>
+        </div>
+      </section>
+    `;
+  };
+
+  const printResultSlips = (eventIds) => {
     if (accessRole === 'user') {
       setNotice('Staff access required.');
       return;
     }
-    if (!slipEvent) {
+    const printEvents = eventIds.map((eventId) => eventMap.get(eventId)).filter(Boolean);
+    if (!printEvents.length) {
       setNotice('Choose an event first.');
       return;
     }
-
-    const rows = jurySheetRows
-      .map(({ registration, student, participantNo }) => {
-        return `
-          <tr>
-            <td>${participantNo}</td>
-            <td>${displayEntryName(registration, student)}</td>
-            <td>${student.className || registration.className || ''}</td>
-            <td>${registration.house || student.house || ''}</td>
-            <td>${registration.position || ''}</td>
-            <td></td>
-          </tr>
-        `;
-      }).join('');
 
     const printWindow = window.open('', '_blank', 'width=900,height=700');
     if (!printWindow) return;
     printWindow.document.write(`
       <html>
         <head>
-          <title>Result Slip - ${slipEvent.name}</title>
+          <title>${escapeHtml(t('resultSlip'))} - ${escapeHtml(printEvents.length === 1 ? eventPrintTitle(printEvents[0]) : `${printEvents.length} ${t('resultEvents')}`)}</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 24px; color: #111827; }
             .header { text-align: center; border-bottom: 2px solid #111827; padding-bottom: 12px; margin-bottom: 18px; }
             h1 { margin: 0; font-size: 22px; text-transform: uppercase; }
             h2 { margin: 8px 0 0; font-size: 17px; }
+            h3 { margin: 12px 0 0; font-size: 19px; text-transform: uppercase; }
+            p { margin: 6px 0 0; font-size: 13px; font-weight: bold; }
             table { width: 100%; border-collapse: collapse; margin-top: 18px; }
             th, td { border: 1px solid #111827; padding: 8px; font-size: 13px; text-align: left; }
             th { background: #f3f4f6; text-transform: uppercase; font-size: 11px; }
@@ -953,28 +1316,27 @@ function App() {
             td:nth-child(6) { height: 30px; width: 160px; }
             .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 54px; }
             .line { border-top: 1px solid #111827; padding-top: 8px; font-size: 12px; font-weight: bold; }
-            @media print { button { display: none; } }
+            .slip-page { page-break-after: always; }
+            .slip-page:last-child { page-break-after: auto; }
+            @media print { button { display: none; } body { padding: 0; } }
           </style>
         </head>
         <body>
-          <button onclick="window.print()">Print</button>
-          <div class="header">
-            <h1>${settings.schoolName}</h1>
-            <h2>${settings.eventTitle} ${settings.year}</h2>
-            <p>${eventLabel(slipEvent)}</p>
-          </div>
-          <table>
-            <thead><tr><th>No. Peserta</th><th>Name</th><th>Class</th><th>House</th><th>Place / Kedudukan</th><th>Record</th></tr></thead>
-            <tbody>${rows || '<tr><td colspan="6">No registered students.</td></tr>'}</tbody>
-          </table>
-          <div class="signatures">
-            <div class="line">Prepared by</div>
-            <div class="line">Confirmed by</div>
-          </div>
+          <button onclick="window.print()">${escapeHtml(t('print'))}</button>
+          ${printEvents.map(renderSlipPage).join('')}
         </body>
       </html>
     `);
     printWindow.document.close();
+  };
+
+  const printResultSlip = () => printResultSlips([slipEventId]);
+  const printSelectedResultSlips = () => printResultSlips(selectedSlipEventIds);
+
+  const toggleSlipSelection = (eventId) => {
+    setSelectedSlipEventIds((current) => (
+      current.includes(eventId) ? current.filter((id) => id !== eventId) : [...current, eventId]
+    ));
   };
 
   const openLogin = (mode) => {
@@ -1032,8 +1394,8 @@ function App() {
             <img className="loading-logo" src={SCHOOL_LOGO_PATH} alt={`${settings.schoolName || DEFAULT_SETTINGS.schoolName} logo`} />
             <div className="spinner" aria-hidden="true" />
             <p className="eyebrow">{settings.schoolName || DEFAULT_SETTINGS.schoolName}</p>
-            <h1>Loading e-Sukan data</h1>
-            <p className="help-text">Please wait while Firebase loads settings, students, events, and scores.</p>
+            <h1>{t('loadingTitle')}</h1>
+            <p className="help-text">{t('loadingHelp')}</p>
           </section>
         </main>
         {notice && <button className="notice" type="button" onClick={() => setNotice('')}>{notice}</button>}
@@ -1042,14 +1404,14 @@ function App() {
   }
 
   const allTabs = [
-    ['live', Monitor, 'Live Board'],
-    ['viewResults', FileSpreadsheet, 'View Results'],
-    ['students', Users, 'Students'],
-    ['events', Trophy, 'Events'],
-    ['register', ClipboardList, 'Register'],
-    ['results', Medal, 'Results Entry'],
-    ['slips', Printer, 'Slips'],
-    ['settings', Settings, 'Settings'],
+    ['live', Monitor, t('liveBoard')],
+    ['viewResults', FileSpreadsheet, t('viewResults')],
+    ['students', Users, t('students')],
+    ['events', Trophy, t('events')],
+    ['register', ClipboardList, t('register')],
+    ['results', Medal, t('resultsEntry')],
+    ['slips', Printer, t('slips')],
+    ['settings', Settings, t('settings')],
   ];
   const tabs = allTabs.filter(([id]) => visibleTabs.includes(id));
 
@@ -1073,14 +1435,18 @@ function App() {
                 </button>
               ))}
             </nav>
-          ) : <div className="viewer-pill">Live Board</div>}
+          ) : <div className="viewer-pill">{t('liveBoard')}</div>}
           <div className="access-controls">
-            <span>{ACCESS_LEVELS[accessRole]?.label || 'Live View'}</span>
-            {accessRole !== 'user' && <button type="button" onClick={returnToLiveView}>Live View</button>}
-            <button type="button" onClick={() => openLogin('teacher')}>Teacher</button>
-            <button type="button" onClick={() => openLogin('admin')}>Admin</button>
+            <span>{accessRole === 'admin' ? t('admin') : accessRole === 'teacher' ? t('teacher') : t('liveView')}</span>
+            {accessRole !== 'user' && <button type="button" onClick={returnToLiveView}>{t('liveView')}</button>}
+            <button type="button" onClick={() => openLogin('teacher')}>{t('teacher')}</button>
+            <button type="button" onClick={() => openLogin('admin')}>{t('admin')}</button>
           </div>
-          <button className="theme-toggle" type="button" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} title="Toggle theme">
+          <button className="language-toggle" type="button" onClick={cycleLanguage} title={t('changeLanguage')} aria-label={t('changeLanguage')}>
+            <Languages size={16} />
+            <span>{currentLanguage.short}</span>
+          </button>
+          <button className="theme-toggle" type="button" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} title={t('toggleTheme')} aria-label={t('toggleTheme')}>
             {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
           </button>
         </div>
@@ -1127,7 +1493,7 @@ function App() {
                     <h2>{liveBoardHeaderTitle}</h2>
                   </div>
                 </div>
-                <button className="icon-button" type="button" onClick={openFullscreen} title="Fullscreen">
+                <button className="icon-button" type="button" onClick={openFullscreen} title={t('fullscreen')} aria-label={t('fullscreen')}>
                   <Maximize2 size={18} />
                 </button>
               </div>
@@ -1148,44 +1514,92 @@ function App() {
               </div>
             </div>
 
-            {settings.liveBoardMode !== 'total-only' && (
-              <div className="panel class-panel">
+            <div className="live-side-stack">
+              {settings.liveBoardMode !== 'total-only' && (
+                <div className="panel class-panel">
+                  <div className="section-head">
+                    <div>
+                      <p className="eyebrow">{t('optional')}</p>
+                      <h2>{t('classMarks')}</h2>
+                    </div>
+                    <Medal size={22} />
+                  </div>
+                  <div className="mini-list">
+                    {scoreData.classes.slice(0, 12).map((row, index) => (
+                      <div className="mini-row" key={row.name}>
+                        <span>{index + 1}. {row.name}</span>
+                        <strong>{row.total}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="panel athlete-panel">
                 <div className="section-head">
                   <div>
-                    <p className="eyebrow">Optional</p>
-                    <h2>Class Marks</h2>
+                    <p className="eyebrow">{t('medals')}</p>
+                    <h2>{t('olahragawanTitle')}</h2>
                   </div>
                   <Medal size={22} />
                 </div>
-                <div className="mini-list">
-                  {scoreData.classes.slice(0, 12).map((row, index) => (
-                    <div className="mini-row" key={row.name}>
-                      <span>{index + 1}. {row.name}</span>
-                      <strong>{row.total}</strong>
+                <div className="athlete-list">
+                  {[
+                    [t('olahragawan'), athleteLeaders.male],
+                    [t('olahragawati'), athleteLeaders.female],
+                  ].map(([label, athlete]) => (
+                    <div className="athlete-row" key={label}>
+                      <span>{label}</span>
+                      {athlete ? (
+                        <div>
+                          <strong>{displayStudentName(athlete.student)}</strong>
+                          <small>{athlete.student.className || '-'} - {athlete.student.house || '-'}</small>
+                          <b>{t('gold')} {athlete.gold} / {t('silver')} {athlete.silver} / {t('bronze')} {athlete.bronze}</b>
+                        </div>
+                      ) : <em>{t('noMedals')}</em>}
                     </div>
                   ))}
                 </div>
               </div>
-            )}
 
-            <div className="panel results-panel">
-              <div className="section-head">
-                <div>
-                  <p className="eyebrow">Latest</p>
-                  <h2>Results</h2>
-                </div>
-                <FileSpreadsheet size={22} />
-              </div>
-              <div className="result-list">
-                {latestResults.length ? latestResults.map((result) => (
-                  <div className="result-row" key={result.id}>
-                    <div>
-                      <strong>{displayEntryName(result, result.student)}</strong>
-                      <span>{result.event?.name || 'Event'} ({result.event?.category || '-'})</span>
-                    </div>
-                    <b>{result.points || 0}</b>
+              <div className="panel results-panel">
+                <div className="section-head">
+                  <div>
+                    <p className="eyebrow">{t('latest')}</p>
+                    <h2>{t('results')}</h2>
                   </div>
-                )) : <p className="empty">No results entered yet.</p>}
+                  <FileSpreadsheet size={22} />
+                </div>
+                <div className="result-list">
+                  {latestResultGroups.length ? latestResultGroups.map((group) => {
+                    const expanded = Boolean(expandedLiveResultIds[group.id]);
+                    return (
+                      <div className="result-group" key={group.id}>
+                        <button className="result-summary" type="button" onClick={() => toggleResultGroup(group.id, 'live')} aria-expanded={expanded}>
+                          <span>
+                            <strong>{eventDisplayName(group.event)}</strong>
+                            <small>{group.results.length} {t('completedResults').toLowerCase()}</small>
+                          </span>
+                          <ChevronDown className={expanded ? 'chevron open' : 'chevron'} size={18} />
+                        </button>
+                        {expanded && (
+                          <div className="result-details">
+                            {group.results.map((result) => (
+                              <div className="result-detail-row" key={result.id}>
+                                <b>{result.position}</b>
+                                <span>
+                                  <strong>{displayEntryName(result, result.student)}</strong>
+                                  <small>{isHouseEntry(result) ? t('houseEntry') : `${result.student?.className || result.className || '-'} - ${result.house || result.student?.house || '-'}`}</small>
+                                </span>
+                                <em>{result.points || 0}</em>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }) : <p className="empty">{t('noResults')}</p>}
+                </div>
               </div>
             </div>
           </section>
@@ -1593,38 +2007,60 @@ function App() {
             <div className="panel control-panel">
               <div className="section-head">
                 <div>
-                  <p className="eyebrow">Readonly</p>
-                  <h2>View Results</h2>
+                  <p className="eyebrow">{t('readonly')}</p>
+                  <h2>{t('viewResults')}</h2>
                 </div>
                 <FileSpreadsheet size={22} />
               </div>
+              <label>
+                {t('quickEvent')}
+                <select value={viewResultEventFilter} onChange={(event) => setViewResultEventFilter(event.target.value)}>
+                  <option value="">{t('allEvents')}</option>
+                  {resultEventOptions.map(({ id, event }) => <option key={id} value={id}>{eventDisplayName(event)}</option>)}
+                </select>
+              </label>
               <div className="stats-box">
-                <span>Completed: <b>{viewResults.length}</b></span>
-                <span>Events: <b>{new Set(viewResults.map((result) => result.eventId)).size}</b></span>
+                <span>{t('completed')}: <b>{filteredViewResults.length}</b></span>
+                <span>{t('resultEvents')}: <b>{new Set(filteredViewResults.map((result) => result.eventId)).size}</b></span>
               </div>
-              <p className="help-text">This page only shows keyed-in results. Result entry remains admin-only.</p>
+              <p className="help-text">{t('viewHelp')}</p>
             </div>
 
-            <div className="panel table-panel">
-              <table>
-                <thead>
-                  <tr><th>Event</th><th>Place</th><th>Name</th><th>Class</th><th>House</th><th>Points</th></tr>
-                </thead>
-                <tbody>
-                  {viewResults.length ? viewResults.map((result) => (
-                    <tr key={result.id}>
-                      <td>{eventLabel(result.event || {})}</td>
-                      <td>{result.position}</td>
-                      <td>{displayEntryName(result, result.student)}</td>
-                      <td>{result.student?.className || result.className || '-'}</td>
-                      <td>{result.house || result.student?.house || '-'}</td>
-                      <td>{result.points || 0}</td>
-                    </tr>
-                  )) : (
-                    <tr><td colSpan="6">No results entered yet.</td></tr>
-                  )}
-                </tbody>
-              </table>
+            <div className="panel result-browser">
+              {viewResultGroups.length ? viewResultGroups.map((group) => {
+                const expanded = Boolean(expandedViewResultIds[group.id]);
+                return (
+                  <div className="result-group" key={group.id}>
+                    <button className="result-summary" type="button" onClick={() => toggleResultGroup(group.id, 'view')} aria-expanded={expanded}>
+                      <span>
+                        <strong>{eventDisplayName(group.event)}</strong>
+                        <small>{group.results.length} {t('completedResults').toLowerCase()}</small>
+                      </span>
+                      <ChevronDown className={expanded ? 'chevron open' : 'chevron'} size={18} />
+                    </button>
+                    {expanded && (
+                      <div className="result-details">
+                        <div className="result-detail-head">
+                          <span>{t('place')}</span>
+                          <span>{t('name')}</span>
+                          <span>{t('class')}</span>
+                          <span>{t('house')}</span>
+                          <span>{t('points')}</span>
+                        </div>
+                        {group.results.map((result) => (
+                          <div className="result-detail-grid" key={result.id}>
+                            <b>{result.position}</b>
+                            <strong>{displayEntryName(result, result.student)}</strong>
+                            <span>{result.student?.className || result.className || '-'}</span>
+                            <span>{result.house || result.student?.house || '-'}</span>
+                            <em>{result.points || 0}</em>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }) : <p className="empty">{t('noResults')}</p>}
             </div>
           </section>
         )}
@@ -1687,31 +2123,51 @@ function App() {
             <div className="panel control-panel">
               <div className="section-head">
                 <div>
-                  <p className="eyebrow">Official</p>
-                  <h2>Result Slip</h2>
+                  <p className="eyebrow">{t('official')}</p>
+                  <h2>{t('resultSlip')}</h2>
                 </div>
                 <Printer size={22} />
               </div>
               <label>
-                Event
+                {t('event')}
                 <select value={slipEventId} onChange={(event) => setSlipEventId(event.target.value)}>
-                  <option value="">Choose event</option>
+                  <option value="">{t('chooseEvent')}</option>
                   {events.map((event) => <option key={event.id} value={event.id}>{eventLabel(event)}</option>)}
                 </select>
               </label>
               <div className="stats-box">
-                <span>Registered: <b>{registrationsForSlipEvent.length}</b></span>
-                <span>Completed results: <b>{registrationsForSlipEvent.filter((registration) => Number(registration.position || 0) > 0).length}</b></span>
+                <span>{t('registered')}: <b>{registrationsForSlipEvent.length}</b></span>
+                <span>{t('completedResults')}: <b>{registrationsForSlipEvent.filter((registration) => Number(registration.position || 0) > 0).length}</b></span>
               </div>
-              <button className="primary-button" type="button" onClick={printResultSlip}><Printer size={16} /> Generate Slip</button>
+              <button className="primary-button" type="button" onClick={printResultSlip}><Printer size={16} /> {t('generateSlip')}</button>
+              <div className="bulk-slip-box">
+                <div className="list-title">
+                  <p className="eyebrow">{t('bulkPrint')}</p>
+                  <strong>{selectedSlipEventIds.length} {t('selected')}</strong>
+                </div>
+                <div className="bulk-actions">
+                  <button type="button" onClick={() => setSelectedSlipEventIds(events.map((event) => event.id))}>{t('selectAll')}</button>
+                  <button type="button" onClick={() => setSelectedSlipEventIds([])}>{t('clear')}</button>
+                </div>
+                <div className="bulk-slip-list">
+                  {events.map((event) => (
+                    <label className="bulk-slip-row" key={event.id}>
+                      <input type="checkbox" checked={selectedSlipEventIds.includes(event.id)} onChange={() => toggleSlipSelection(event.id)} />
+                      <span>{eventDisplayName(event)}</span>
+                    </label>
+                  ))}
+                </div>
+                <button className="secondary-button" type="button" onClick={printSelectedResultSlips}><Printer size={16} /> {t('printSelected')}</button>
+              </div>
             </div>
             <div className="panel slip-preview">
               <div className="slip-paper">
                 <p className="eyebrow">{settings.schoolName}</p>
                 <h2>{settings.eventTitle} {settings.year}</h2>
-                <h3>{slipEvent ? eventLabel(slipEvent) : 'Choose an event'}</h3>
+                <h3>{slipEvent ? eventPrintTitle(slipEvent) : t('chooseEvent')}</h3>
+                {slipEvent && <p className="slip-meta">{[slipEvent.no ? `No. ${slipEvent.no}` : '', slipEvent.category || ''].filter(Boolean).join(' - ')}</p>}
                 <table>
-                  <thead><tr><th>No. Peserta</th><th>Name</th><th>Class</th><th>House</th><th>Place / Kedudukan</th><th>Record</th></tr></thead>
+                  <thead><tr><th>{t('participantNo')}</th><th>{t('name')}</th><th>{t('class')}</th><th>{t('house')}</th><th>{t('place')} / {t('position')}</th><th>{t('record')}</th></tr></thead>
                   <tbody>
                     {jurySheetRows.length ? jurySheetRows
                       .map(({ registration, student, participantNo }) => {
@@ -1726,7 +2182,7 @@ function App() {
                           </tr>
                         );
                       }) : (
-                        <tr><td colSpan="6">No registered students.</td></tr>
+                        <tr><td colSpan="6">{t('noRegistered')}</td></tr>
                       )}
                   </tbody>
                 </table>
