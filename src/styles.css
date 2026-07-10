@@ -706,6 +706,26 @@ textarea {
   line-height: 1.45;
 }
 
+.check-row,
+.table-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.check-row input,
+.table-check input {
+  width: 18px;
+  min-height: 18px;
+}
+
+.table-check {
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
 .inline-fields,
 .points-grid {
   display: grid;

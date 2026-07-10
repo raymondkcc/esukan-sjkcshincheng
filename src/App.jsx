@@ -58,6 +58,7 @@ const DEFAULT_EVENT_FORM = {
   categories: ['L1', 'P1'],
   type: 'Individu',
   kind: 'Utama',
+  withoutStudent: false,
   points1: 10,
   points2: 7,
   points3: 5,
@@ -122,6 +123,10 @@ const displayStudentName = (student, fallback = '') => {
   const names = [student?.name, student?.chineseName].map((value) => String(value || '').trim()).filter(Boolean);
   return names.length ? names.join(' / ') : fallback;
 };
+const isHouseEntry = (registration) => registration?.entryType === 'house';
+const displayEntryName = (registration, student = {}) =>
+  isHouseEntry(registration) ? normalizeHouse(registration.house || student.house || registration.studentIc) : displayStudentName(student, registration.studentIc);
+const getHouseEntryKey = (house) => `house-${hashString(house)}`;
 const normalizeGender = (value) => {
   const text = String(value || '').trim();
   const key = text.toLocaleUpperCase('ms-MY');
@@ -225,6 +230,7 @@ function App() {
   const liveBoardHeaderTitle = String(settings.liveBoardHeaderTitle || DEFAULT_SETTINGS.liveBoardHeaderTitle).trim();
   const visibleTabs = ACCESS_LEVELS[accessRole]?.tabs || ACCESS_LEVELS.user.tabs;
   const loading = !Object.values(loadedSections).every(Boolean);
+  const nextEventNo = useMemo(() => Math.max(0, ...events.map((event) => Number(event.no || 0))) + 1, [events]);
 
   useEffect(() => {
     localStorage.setItem('esukan-theme', theme);
@@ -237,6 +243,14 @@ function App() {
   useEffect(() => {
     if (!visibleTabs.includes(activeTab)) setActiveTab('live');
   }, [activeTab, visibleTabs]);
+
+  useEffect(() => {
+    setEventForm((current) => {
+      const currentStart = Number(current.startNo || 0);
+      if (String(current.baseName || '').trim() || currentStart >= nextEventNo) return current;
+      return { ...current, startNo: nextEventNo };
+    });
+  }, [nextEventNo]);
 
   useEffect(() => {
     if (!refs) return undefined;
@@ -310,7 +324,7 @@ function App() {
     const studentB = studentMap.get(b.studentIc) || {};
     const classCompare = String(studentA.className || a.className || '').localeCompare(String(studentB.className || b.className || ''), undefined, { numeric: true });
     if (classCompare) return classCompare;
-    return displayStudentName(studentA, a.studentIc).localeCompare(displayStudentName(studentB, b.studentIc));
+    return displayEntryName(a, studentA).localeCompare(displayEntryName(b, studentB));
   });
   const registeredStudentSet = new Set(registrationsForRegisterEvent.map((item) => item.studentIc));
   const studentClassOptions = useMemo(() => (
@@ -340,7 +354,7 @@ function App() {
   const registerEligibility = getEventEligibility(registerEvent);
   const registerEffectiveClassFilter = registerEligibility.year ? String(registerEligibility.year) : registerClassFilter;
   const registerEffectiveGenderFilter = registerEligibility.gender || registerGenderFilter;
-  const registerCandidates = students
+  const registerCandidates = registerEvent?.withoutStudent ? [] : students
     .filter((student) => {
       const query = registerQuery.trim().toLowerCase();
       const matchesQuery = !query || [student.name, student.chineseName, student.className, student.gender, student.house].some((value) =>
@@ -415,7 +429,7 @@ function App() {
       if (houseCompare) return houseCompare;
       const classCompare = String(a.student.className || a.registration.className || '').localeCompare(String(b.student.className || b.registration.className || ''), undefined, { numeric: true });
       if (classCompare) return classCompare;
-      return displayStudentName(a.student, a.registration.studentIc).localeCompare(displayStudentName(b.student, b.registration.studentIc));
+      return displayEntryName(a.registration, a.student).localeCompare(displayEntryName(b.registration, b.student));
     })
     .map((row, index) => ({ ...row, participantNo: index + 1 }));
 
@@ -469,6 +483,7 @@ function App() {
     const batch = writeBatch(db);
     const timestamp = Date.now();
     const scoring = getScoring();
+    const withoutStudent = Boolean(eventForm.withoutStudent);
     sortedCategories.forEach((category, index) => {
       const eventName = buildEventName(baseName, category);
       const id = `${timestamp}-${index}-${slugify(eventName)}`;
@@ -479,10 +494,27 @@ function App() {
         category,
         type: eventForm.type,
         kind: eventForm.kind,
+        withoutStudent,
         scoring,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+      if (withoutStudent) {
+        houses.forEach((house) => {
+          const entryKey = getHouseEntryKey(house);
+          batch.set(doc(refs.registrations, `${id}_${entryKey}`), {
+            eventId: id,
+            entryType: 'house',
+            studentIc: entryKey,
+            house,
+            className: '',
+            position: '',
+            points: 0,
+            updatedAt: serverTimestamp(),
+            updatedMs: Date.now(),
+          }, { merge: true });
+        });
+      }
     });
 
     await batch.commit();
@@ -490,7 +522,7 @@ function App() {
     setResultEventId(`${timestamp}-0-${slugify(buildEventName(baseName, sortedCategories[0]))}`);
     setSlipEventId(`${timestamp}-0-${slugify(buildEventName(baseName, sortedCategories[0]))}`);
     setEventForm((current) => ({ ...DEFAULT_EVENT_FORM, startNo: Number(current.startNo || 1) + sortedCategories.length }));
-    setNotice(`${sortedCategories.length} events created.`);
+    setNotice(withoutStudent ? `${sortedCategories.length} house events created with all houses registered.` : `${sortedCategories.length} events created.`);
   };
 
   const downloadTemplate = async () => {
@@ -662,6 +694,7 @@ function App() {
       category: event.category || '',
       type: event.type || 'Individu',
       kind: event.kind || 'Utama',
+      withoutStudent: Boolean(event.withoutStudent),
       points1: Number(event.scoring?.[1] || 0),
       points2: Number(event.scoring?.[2] || 0),
       points3: Number(event.scoring?.[3] || 0),
@@ -688,6 +721,7 @@ function App() {
       category: eventEditForm.category.trim(),
       type: eventEditForm.type,
       kind: eventEditForm.kind,
+      withoutStudent: Boolean(eventEditForm.withoutStudent),
       scoring: {
         1: Number(eventEditForm.points1 || 0),
         2: Number(eventEditForm.points2 || 0),
@@ -701,7 +735,37 @@ function App() {
       setNotice('Event name and category are required.');
       return;
     }
-    await setDoc(doc(refs.events, event.id), payload, { merge: true });
+    const batch = writeBatch(db);
+    batch.set(doc(refs.events, event.id), payload, { merge: true });
+    const eventRegistrationRows = registrations.filter((registration) => registration.eventId === event.id);
+    if (payload.withoutStudent) {
+      if (!event.withoutStudent) {
+        eventRegistrationRows.forEach((registration) => {
+          batch.delete(doc(refs.registrations, registration.id));
+        });
+      }
+      const existingHouseEntries = new Set(eventRegistrationRows.filter(isHouseEntry).map((registration) => registration.studentIc));
+      houses.forEach((house) => {
+        const entryKey = getHouseEntryKey(house);
+        if (event.withoutStudent && existingHouseEntries.has(entryKey)) return;
+        batch.set(doc(refs.registrations, `${event.id}_${entryKey}`), {
+          eventId: event.id,
+          entryType: 'house',
+          studentIc: entryKey,
+          house,
+          className: '',
+          position: '',
+          points: 0,
+          updatedAt: serverTimestamp(),
+          updatedMs: Date.now(),
+        }, { merge: true });
+      });
+    } else if (event.withoutStudent) {
+      eventRegistrationRows.filter(isHouseEntry).forEach((registration) => {
+        batch.delete(doc(refs.registrations, registration.id));
+      });
+    }
+    await batch.commit();
     cancelEventEdit();
     setNotice('Event updated.');
   };
@@ -759,6 +823,10 @@ function App() {
     }
     if (!registerEvent) {
       setNotice('Choose an event first.');
+      return;
+    }
+    if (registerEvent.withoutStudent) {
+      setNotice('This event registers houses automatically.');
       return;
     }
 
@@ -848,7 +916,7 @@ function App() {
         return `
           <tr>
             <td>${participantNo}</td>
-            <td>${displayStudentName(student, registration.studentIc)}</td>
+            <td>${displayEntryName(registration, student)}</td>
             <td>${student.className || registration.className || ''}</td>
             <td>${registration.house || student.house || ''}</td>
             <td>${registration.position || ''}</td>
@@ -1102,7 +1170,7 @@ function App() {
                 {latestResults.length ? latestResults.map((result) => (
                   <div className="result-row" key={result.id}>
                     <div>
-                      <strong>{displayStudentName(result.student, result.studentIc)}</strong>
+                      <strong>{displayEntryName(result, result.student)}</strong>
                       <span>{result.event?.name || 'Event'} ({result.event?.category || '-'})</span>
                     </div>
                     <b>{result.points || 0}</b>
@@ -1279,6 +1347,11 @@ function App() {
                   <option>Guru</option>
                 </select>
               </label>
+              <label className="check-row">
+                <input type="checkbox" checked={eventForm.withoutStudent} onChange={(event) => setEventForm({ ...eventForm, withoutStudent: event.target.checked })} />
+                <span>Without student details</span>
+              </label>
+              {eventForm.withoutStudent && <p className="help-text">All houses will be registered automatically. Results entry will score houses only.</p>}
               <div className="category-picker">
                 <div className="category-actions">
                   <span>Categories</span>
@@ -1306,7 +1379,7 @@ function App() {
             <div className="panel table-panel">
               <table>
                 <thead>
-                  <tr><th>No</th><th>Event</th><th>Category</th><th>Type</th><th>Scoring</th><th>Entries</th><th></th></tr>
+                  <tr><th>No</th><th>Event</th><th>Category</th><th>Type</th><th>Mode</th><th>Scoring</th><th>Entries</th><th></th></tr>
                 </thead>
                 <tbody>
                   {events.map((event) => {
@@ -1335,6 +1408,14 @@ function App() {
                               <option>Kumpulan</option>
                             </select>
                           ) : event.type}
+                        </td>
+                        <td>
+                          {editing ? (
+                            <label className="table-check">
+                              <input type="checkbox" checked={eventEditForm.withoutStudent} onChange={(inputEvent) => setEventEditForm({ ...eventEditForm, withoutStudent: inputEvent.target.checked })} />
+                              House
+                            </label>
+                          ) : (event.withoutStudent ? 'House only' : 'Student')}
                         </td>
                         <td>
                           {editing ? (
@@ -1396,6 +1477,9 @@ function App() {
                   {events.map((event) => <option key={event.id} value={event.id}>{eventLabel(event)}</option>)}
                 </select>
               </label>
+              {registerEvent?.withoutStudent && (
+                <p className="help-text">This event does not need student registration. All houses are registered automatically from house settings.</p>
+              )}
               <label>
                 Search
                 <input value={registerQuery} onChange={(event) => setRegisterQuery(event.target.value)} placeholder="Name, 姓名, kelas, gender" />
@@ -1428,7 +1512,7 @@ function App() {
               )}
               <div className="stats-box">
                 <span>Registered: <b>{registrationsForRegisterEvent.length}</b></span>
-                <span>Available students: <b>{registerCandidates.length}</b></span>
+                <span>{registerEvent?.withoutStudent ? 'House event' : 'Available students'}: <b>{registerEvent?.withoutStudent ? registrationsForRegisterEvent.length : registerCandidates.length}</b></span>
               </div>
               <button
                 className="secondary-button"
@@ -1448,7 +1532,7 @@ function App() {
               <div className="entry-columns">
                 <div>
                   <div className="list-title">
-                    <p className="eyebrow">Student Pool</p>
+                    <p className="eyebrow">{registerEvent?.withoutStudent ? 'House Event' : 'Student Pool'}</p>
                     <strong>{registerCandidates.length}</strong>
                   </div>
                   <div className="student-picker">
@@ -1469,7 +1553,7 @@ function App() {
                 </div>
                 <div>
                   <div className="list-title">
-                    <p className="eyebrow">Registered Students</p>
+                    <p className="eyebrow">{registerEvent?.withoutStudent ? 'Registered Houses' : 'Registered Students'}</p>
                     <strong>{registrationsForRegisterEvent.length}</strong>
                   </div>
                   <div className="registered-list">
@@ -1479,10 +1563,10 @@ function App() {
                         <div className="registered-row" key={registration.id}>
                           <div className="registered-top">
                             <div>
-                              <strong>{displayStudentName(student, registration.studentIc)}</strong>
-                              <small>{student.className || registration.className} - {student.gender || '-'} - {registration.house}</small>
+                              <strong>{displayEntryName(registration, student)}</strong>
+                              <small>{isHouseEntry(registration) ? 'House entry' : `${student.className || registration.className} - ${student.gender || '-'} - ${registration.house}`}</small>
                             </div>
-                            <button className="position clear" type="button" onClick={() => toggleRegistration({ ...student, ic: registration.studentIc })}>Remove</button>
+                            {!registerEvent?.withoutStudent && <button className="position clear" type="button" onClick={() => toggleRegistration({ ...student, ic: registration.studentIc })}>Remove</button>}
                           </div>
                         </div>
                       );
@@ -1521,7 +1605,7 @@ function App() {
                     <tr key={result.id}>
                       <td>{eventLabel(result.event || {})}</td>
                       <td>{result.position}</td>
-                      <td>{displayStudentName(result.student, result.studentIc)}</td>
+                      <td>{displayEntryName(result, result.student)}</td>
                       <td>{result.student?.className || result.className || '-'}</td>
                       <td>{result.house || result.student?.house || '-'}</td>
                       <td>{result.points || 0}</td>
@@ -1568,8 +1652,8 @@ function App() {
                   <div className="registered-row" key={registration.id}>
                     <div className="registered-top">
                       <div>
-                        <strong>{displayStudentName(student, registration.studentIc)}</strong>
-                        <small>{student.className || registration.className} - {student.gender || '-'} - {registration.house}</small>
+                        <strong>{displayEntryName(registration, student)}</strong>
+                        <small>{isHouseEntry(registration) ? 'House entry' : `${student.className || registration.className} - ${student.gender || '-'} - ${registration.house}`}</small>
                       </div>
                       <b>{registration.points || 0}</b>
                     </div>
@@ -1624,7 +1708,7 @@ function App() {
                         return (
                           <tr key={registration.id}>
                             <td>{participantNo}</td>
-                            <td>{displayStudentName(student, registration.studentIc)}</td>
+                            <td>{displayEntryName(registration, student)}</td>
                             <td>{student.className || registration.className}</td>
                             <td>{registration.house || student.house}</td>
                             <td>{registration.position || ''}</td>
