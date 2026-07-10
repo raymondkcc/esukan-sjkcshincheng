@@ -799,6 +799,17 @@ td {
   font-weight: 800;
 }
 
+.editing-row {
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+}
+
+.editing-row input,
+.editing-row select {
+  min-height: 36px;
+  padding: 7px 9px;
+  font-size: 0.84rem;
+}
+
 .mono {
   color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
@@ -830,10 +841,64 @@ td .house {
   background: color-mix(in srgb, var(--danger) 10%, var(--surface));
 }
 
+.row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 94px;
+}
+
+.small-button {
+  min-height: 34px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  padding: 6px 9px;
+  color: #ffffff;
+  background: var(--accent);
+  font-size: 0.76rem;
+  font-weight: 1000;
+}
+
+.small-button.muted {
+  color: var(--text);
+  background: var(--surface);
+}
+
+.mini-points {
+  display: grid;
+  grid-template-columns: repeat(5, 42px);
+  gap: 6px;
+}
+
+.mini-points input {
+  min-height: 34px;
+  padding: 6px;
+  text-align: center;
+}
+
 .entry-columns {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
+}
+
+.list-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 42px;
+  padding: 0 2px;
+}
+
+.list-title .eyebrow {
+  margin: 0;
+}
+
+.list-title strong {
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 .student-picker,

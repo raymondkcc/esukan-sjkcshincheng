@@ -21,6 +21,7 @@ import {
   Moon,
   Printer,
   Save,
+  SquarePen,
   Settings,
   Sun,
   Trash2,
@@ -132,6 +133,15 @@ const getYear = (className) => {
   const match = String(className || '').match(/[1-6]/);
   return match ? Number(match[0]) : 0;
 };
+const getEventEligibility = (event) => {
+  const category = String(event?.category || '').trim().toLocaleUpperCase('ms-MY');
+  const match = category.match(/^([LP])([1-6])$/);
+  if (!match) return { year: 0, gender: '' };
+  return {
+    year: Number(match[2]),
+    gender: match[1] === 'L' ? 'Lelaki' : 'Perempuan',
+  };
+};
 const getCell = (row, names) => {
   const keys = Object.keys(row || {});
   const key = keys.find((candidate) =>
@@ -185,11 +195,17 @@ function App() {
   const [studentClassFilter, setStudentClassFilter] = useState('');
   const [studentGenderFilter, setStudentGenderFilter] = useState('');
   const [studentHouseFilter, setStudentHouseFilter] = useState('');
+  const [editingStudentKey, setEditingStudentKey] = useState('');
+  const [studentEditForm, setStudentEditForm] = useState(null);
   const [registerEventId, setRegisterEventId] = useState('');
   const [registerQuery, setRegisterQuery] = useState('');
   const [registerHouse, setRegisterHouse] = useState('');
+  const [registerClassFilter, setRegisterClassFilter] = useState('');
+  const [registerGenderFilter, setRegisterGenderFilter] = useState('');
   const [resultEventId, setResultEventId] = useState('');
   const [slipEventId, setSlipEventId] = useState('');
+  const [editingEventId, setEditingEventId] = useState('');
+  const [eventEditForm, setEventEditForm] = useState(null);
 
   const refs = useMemo(() => {
     if (!db) return null;
@@ -311,13 +327,18 @@ function App() {
     return matchesQuery && matchesClass && matchesGender && matchesHouse;
   });
 
+  const registerEligibility = getEventEligibility(registerEvent);
+  const registerEffectiveClassFilter = registerEligibility.year ? String(registerEligibility.year) : registerClassFilter;
+  const registerEffectiveGenderFilter = registerEligibility.gender || registerGenderFilter;
   const registerCandidates = students.filter((student) => {
     const query = registerQuery.trim().toLowerCase();
     const matchesQuery = !query || [student.name, student.chineseName, student.className, student.gender, student.house].some((value) =>
       String(value || '').toLowerCase().includes(query),
     );
     const matchesHouse = !registerHouse || houseMatchKey(student.house) === houseMatchKey(registerHouse);
-    return matchesQuery && matchesHouse;
+    const matchesYear = !registerEffectiveClassFilter || String(getYear(student.className)) === String(registerEffectiveClassFilter);
+    const matchesGender = !registerEffectiveGenderFilter || String(student.gender || '') === registerEffectiveGenderFilter;
+    return matchesQuery && matchesHouse && matchesYear && matchesGender;
   });
 
   const scoreData = useMemo(() => {
@@ -518,10 +539,141 @@ function App() {
     }
   };
 
+  const startStudentEdit = (student) => {
+    setEditingStudentKey(getStudentKey(student));
+    setStudentEditForm({
+      name: student.name || '',
+      chineseName: student.chineseName || '',
+      className: student.className || '',
+      gender: student.gender || '',
+      house: student.house || '',
+    });
+  };
+
+  const cancelStudentEdit = () => {
+    setEditingStudentKey('');
+    setStudentEditForm(null);
+  };
+
+  const saveStudentEdit = async (student) => {
+    if (accessRole === 'user') {
+      setNotice('Staff access required.');
+      return;
+    }
+    const studentKey = getStudentKey(student);
+    if (!studentKey || !studentEditForm) return;
+    const payload = {
+      name: studentEditForm.name.trim(),
+      chineseName: studentEditForm.chineseName.trim(),
+      className: studentEditForm.className.trim(),
+      gender: normalizeGender(studentEditForm.gender),
+      house: normalizeHouse(studentEditForm.house),
+      ic: studentKey,
+      studentKey,
+      updatedAt: serverTimestamp(),
+    };
+    if (!payload.name || !payload.className || !payload.gender || !payload.house) {
+      setNotice('Name, class, gender, and house are required.');
+      return;
+    }
+    const batch = writeBatch(db);
+    batch.set(doc(refs.students, studentKey), payload, { merge: true });
+    registrations.filter((registration) => registration.studentIc === studentKey).forEach((registration) => {
+      batch.set(doc(refs.registrations, registration.id), {
+        className: payload.className,
+        house: payload.house,
+        updatedAt: serverTimestamp(),
+        updatedMs: Date.now(),
+      }, { merge: true });
+    });
+    await batch.commit();
+    cancelStudentEdit();
+    setNotice('Student updated.');
+  };
+
+  const deleteStudent = async (student) => {
+    if (accessRole === 'user') {
+      setNotice('Staff access required.');
+      return;
+    }
+    const studentKey = getStudentKey(student);
+    if (!studentKey) return;
+    const confirmed = window.confirm(`Delete ${displayStudentName(student, studentKey)} and all event registrations?`);
+    if (!confirmed) return;
+    const batch = writeBatch(db);
+    registrations.filter((registration) => registration.studentIc === studentKey).forEach((registration) => {
+      batch.delete(doc(refs.registrations, registration.id));
+    });
+    batch.delete(doc(refs.students, studentKey));
+    await batch.commit();
+    if (editingStudentKey === studentKey) cancelStudentEdit();
+    setNotice('Student deleted.');
+  };
+
+  const startEventEdit = (event) => {
+    setEditingEventId(event.id);
+    setEventEditForm({
+      no: Number(event.no || 0),
+      name: event.name || '',
+      baseName: event.baseName || event.name || '',
+      category: event.category || '',
+      type: event.type || 'Individu',
+      kind: event.kind || 'Utama',
+      points1: Number(event.scoring?.[1] || 0),
+      points2: Number(event.scoring?.[2] || 0),
+      points3: Number(event.scoring?.[3] || 0),
+      points4: Number(event.scoring?.[4] || 0),
+      points5: Number(event.scoring?.[5] || 0),
+    });
+  };
+
+  const cancelEventEdit = () => {
+    setEditingEventId('');
+    setEventEditForm(null);
+  };
+
+  const saveEventEdit = async (event) => {
+    if (accessRole === 'user') {
+      setNotice('Staff access required.');
+      return;
+    }
+    if (!eventEditForm) return;
+    const payload = {
+      no: Number(eventEditForm.no || 0),
+      name: eventEditForm.name.trim(),
+      baseName: eventEditForm.baseName.trim(),
+      category: eventEditForm.category.trim(),
+      type: eventEditForm.type,
+      kind: eventEditForm.kind,
+      scoring: {
+        1: Number(eventEditForm.points1 || 0),
+        2: Number(eventEditForm.points2 || 0),
+        3: Number(eventEditForm.points3 || 0),
+        4: Number(eventEditForm.points4 || 0),
+        5: Number(eventEditForm.points5 || 0),
+      },
+      updatedAt: serverTimestamp(),
+    };
+    if (!payload.name || !payload.category) {
+      setNotice('Event name and category are required.');
+      return;
+    }
+    await setDoc(doc(refs.events, event.id), payload, { merge: true });
+    cancelEventEdit();
+    setNotice('Event updated.');
+  };
+
   const getRegistrationBlockReason = (event, eventList, student) => {
     if (!event) return 'Choose an event first.';
     const year = getYear(student.className);
     if (!year) return 'Student class must contain year 1-6.';
+    const eligibility = getEventEligibility(event);
+    if (eligibility.year && year !== eligibility.year) {
+      return `This event is only for Tahun ${eligibility.year}.`;
+    }
+    if (eligibility.gender && String(student.gender || '') !== eligibility.gender) {
+      return `This event is only for ${eligibility.gender}.`;
+    }
 
     const isTahap2 = year >= 4;
     const type = String(event.type || '').toUpperCase();
@@ -616,12 +768,16 @@ function App() {
       setNotice('Staff access required.');
       return;
     }
+    const event = eventMap.get(eventId);
+    const confirmed = window.confirm(`Delete ${event ? eventLabel(event) : 'this event'} and all registered students for it?`);
+    if (!confirmed) return;
     const batch = writeBatch(db);
     registrations.filter((registration) => registration.eventId === eventId).forEach((registration) => {
       batch.delete(doc(refs.registrations, registration.id));
     });
     batch.delete(doc(refs.events, eventId));
     await batch.commit();
+    if (editingEventId === eventId) cancelEventEdit();
     setNotice('Event deleted.');
   };
 
@@ -977,20 +1133,66 @@ function App() {
             <div className="panel table-panel">
               <table>
                 <thead>
-                  <tr><th>Name</th><th>姓名</th><th>Kelas</th><th>Gender</th><th>House</th></tr>
+                  <tr><th>Name</th><th>姓名</th><th>Kelas</th><th>Gender</th><th>House</th><th></th></tr>
                 </thead>
                 <tbody>
-                  {filteredStudents.map((student) => (
-                    <tr key={getStudentKey(student)}>
-                      <td>{student.name}</td>
-                      <td>{student.chineseName || '-'}</td>
-                      <td>{student.className}</td>
-                      <td>{student.gender || '-'}</td>
-                      <td><span className={houseClassName(student.house)}>{student.house}</span></td>
-                    </tr>
-                  ))}
+                  {filteredStudents.map((student) => {
+                    const studentKey = getStudentKey(student);
+                    const editing = editingStudentKey === studentKey && studentEditForm;
+                    return (
+                      <tr key={studentKey} className={editing ? 'editing-row' : ''}>
+                        <td>
+                          {editing
+                            ? <input value={studentEditForm.name} onChange={(event) => setStudentEditForm({ ...studentEditForm, name: event.target.value })} />
+                            : student.name}
+                        </td>
+                        <td>
+                          {editing
+                            ? <input value={studentEditForm.chineseName} onChange={(event) => setStudentEditForm({ ...studentEditForm, chineseName: event.target.value })} />
+                            : (student.chineseName || '-')}
+                        </td>
+                        <td>
+                          {editing
+                            ? <input value={studentEditForm.className} onChange={(event) => setStudentEditForm({ ...studentEditForm, className: event.target.value })} />
+                            : student.className}
+                        </td>
+                        <td>
+                          {editing ? (
+                            <select value={studentEditForm.gender} onChange={(event) => setStudentEditForm({ ...studentEditForm, gender: event.target.value })}>
+                              <option value="">Choose</option>
+                              <option value="Lelaki">Lelaki</option>
+                              <option value="Perempuan">Perempuan</option>
+                            </select>
+                          ) : (student.gender || '-')}
+                        </td>
+                        <td>
+                          {editing ? (
+                            <input list="house-list" value={studentEditForm.house} onChange={(event) => setStudentEditForm({ ...studentEditForm, house: event.target.value })} />
+                          ) : <span className={houseClassName(student.house)}>{student.house}</span>}
+                        </td>
+                        <td>
+                          <div className="row-actions">
+                            {editing ? (
+                              <>
+                                <button className="small-button" type="button" onClick={() => saveStudentEdit(student)}>Save</button>
+                                <button className="small-button muted" type="button" onClick={cancelStudentEdit}>Cancel</button>
+                              </>
+                            ) : (
+                              <>
+                                <button className="icon-button" title="Edit student" type="button" onClick={() => startStudentEdit(student)}><SquarePen size={16} /></button>
+                                <button className="icon-button danger" title="Delete student" type="button" onClick={() => deleteStudent(student)}><Trash2 size={16} /></button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+              <datalist id="house-list">
+                {houses.map((house) => <option key={house} value={house} />)}
+              </datalist>
             </div>
           </section>
         )}
@@ -1058,21 +1260,75 @@ function App() {
             <div className="panel table-panel">
               <table>
                 <thead>
-                  <tr><th>No</th><th>Event</th><th>Category</th><th>Type</th><th>Entries</th><th></th></tr>
+                  <tr><th>No</th><th>Event</th><th>Category</th><th>Type</th><th>Scoring</th><th>Entries</th><th></th></tr>
                 </thead>
                 <tbody>
-                  {events.map((event) => (
-                    <tr key={event.id}>
-                      <td>{event.no}</td>
-                      <td>{event.name}</td>
-                      <td>{event.category}</td>
-                      <td>{event.type}</td>
-                      <td>{(eventRegistrations.get(event.id) || []).length}</td>
-                      <td><button className="icon-button danger" title="Delete event" type="button" onClick={() => deleteEvent(event.id)}><Trash2 size={16} /></button></td>
-                    </tr>
-                  ))}
+                  {events.map((event) => {
+                    const editing = editingEventId === event.id && eventEditForm;
+                    return (
+                      <tr key={event.id} className={editing ? 'editing-row' : ''}>
+                        <td>
+                          {editing
+                            ? <input type="number" value={eventEditForm.no} onChange={(inputEvent) => setEventEditForm({ ...eventEditForm, no: inputEvent.target.value })} />
+                            : event.no}
+                        </td>
+                        <td>
+                          {editing
+                            ? <input value={eventEditForm.name} onChange={(inputEvent) => setEventEditForm({ ...eventEditForm, name: inputEvent.target.value })} />
+                            : event.name}
+                        </td>
+                        <td>
+                          {editing
+                            ? <input list="category-list" value={eventEditForm.category} onChange={(inputEvent) => setEventEditForm({ ...eventEditForm, category: inputEvent.target.value })} />
+                            : event.category}
+                        </td>
+                        <td>
+                          {editing ? (
+                            <select value={eventEditForm.type} onChange={(inputEvent) => setEventEditForm({ ...eventEditForm, type: inputEvent.target.value })}>
+                              <option>Individu</option>
+                              <option>Kumpulan</option>
+                            </select>
+                          ) : event.type}
+                        </td>
+                        <td>
+                          {editing ? (
+                            <div className="mini-points">
+                              {[1, 2, 3, 4, 5].map((position) => (
+                                <input
+                                  key={position}
+                                  aria-label={`Position ${position} points`}
+                                  type="number"
+                                  value={eventEditForm[`points${position}`]}
+                                  onChange={(inputEvent) => setEventEditForm({ ...eventEditForm, [`points${position}`]: inputEvent.target.value })}
+                                />
+                              ))}
+                            </div>
+                          ) : [1, 2, 3, 4, 5].map((position) => event.scoring?.[position] ?? 0).join('/')}
+                        </td>
+                        <td>{(eventRegistrations.get(event.id) || []).length}</td>
+                        <td>
+                          <div className="row-actions">
+                            {editing ? (
+                              <>
+                                <button className="small-button" type="button" onClick={() => saveEventEdit(event)}>Save</button>
+                                <button className="small-button muted" type="button" onClick={cancelEventEdit}>Cancel</button>
+                              </>
+                            ) : (
+                              <>
+                                <button className="icon-button" title="Edit event" type="button" onClick={() => startEventEdit(event)}><SquarePen size={16} /></button>
+                                <button className="icon-button danger" title="Delete event" type="button" onClick={() => deleteEvent(event.id)}><Trash2 size={16} /></button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+              <datalist id="category-list">
+                {CATEGORY_ORDER.map((category) => <option key={category} value={category} />)}
+              </datalist>
             </div>
           </section>
         )}
@@ -1105,44 +1361,87 @@ function App() {
                   {houses.map((house) => <option key={house} value={house}>{house}</option>)}
                 </select>
               </label>
+              <div className="student-filter-grid">
+                <label>
+                  Year
+                  <select value={registerEffectiveClassFilter} disabled={Boolean(registerEligibility.year)} onChange={(event) => setRegisterClassFilter(event.target.value)}>
+                    <option value="">All years</option>
+                    {[1, 2, 3, 4, 5, 6].map((year) => <option key={year} value={year}>Tahun {year}</option>)}
+                  </select>
+                </label>
+                <label>
+                  Gender
+                  <select value={registerEffectiveGenderFilter} disabled={Boolean(registerEligibility.gender)} onChange={(event) => setRegisterGenderFilter(event.target.value)}>
+                    <option value="">All genders</option>
+                    {studentGenderOptions.map((gender) => <option key={gender} value={gender}>{gender}</option>)}
+                  </select>
+                </label>
+              </div>
+              {registerEvent && (registerEligibility.year || registerEligibility.gender) && (
+                <p className="help-text">This event shows {registerEligibility.year ? `Tahun ${registerEligibility.year}` : 'all years'} {registerEligibility.gender || 'all genders'} students.</p>
+              )}
               <div className="stats-box">
                 <span>Registered: <b>{registrationsForRegisterEvent.length}</b></span>
                 <span>Available students: <b>{registerCandidates.length}</b></span>
               </div>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => {
+                  setRegisterQuery('');
+                  setRegisterHouse('');
+                  setRegisterClassFilter('');
+                  setRegisterGenderFilter('');
+                }}
+              >
+                Clear Search & Filters
+              </button>
             </div>
 
             <div className="panel entry-panel">
               <div className="entry-columns">
-                <div className="student-picker">
-                  {registerCandidates.map((student) => {
-                    const studentKey = getStudentKey(student);
-                    const selected = registeredStudentSet.has(studentKey);
-                    return (
-                      <button className={selected ? 'picker-row selected' : 'picker-row'} key={studentKey} type="button" onClick={() => toggleRegistration(student)}>
-                        <span>
-                          <strong>{displayStudentName(student)}</strong>
-                          <small>{student.className} - {student.gender || '-'} - {student.house}</small>
-                        </span>
-                        <b>{selected ? 'IN' : '+'}</b>
-                      </button>
-                    );
-                  })}
+                <div>
+                  <div className="list-title">
+                    <p className="eyebrow">Student Pool</p>
+                    <strong>{registerCandidates.length}</strong>
+                  </div>
+                  <div className="student-picker">
+                    {registerCandidates.map((student) => {
+                      const studentKey = getStudentKey(student);
+                      const selected = registeredStudentSet.has(studentKey);
+                      return (
+                        <button className={selected ? 'picker-row selected' : 'picker-row'} key={studentKey} type="button" onClick={() => toggleRegistration(student)}>
+                          <span>
+                            <strong>{displayStudentName(student)}</strong>
+                            <small>{student.className} - {student.gender || '-'} - {student.house}</small>
+                          </span>
+                          <b>{selected ? 'IN' : '+'}</b>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="registered-list">
-                  {registrationsForRegisterEvent.map((registration) => {
-                    const student = studentMap.get(registration.studentIc) || {};
-                    return (
-                      <div className="registered-row" key={registration.id}>
-                        <div className="registered-top">
-                          <div>
-                            <strong>{displayStudentName(student, registration.studentIc)}</strong>
-                            <small>{student.className || registration.className} - {student.gender || '-'} - {registration.house}</small>
+                <div>
+                  <div className="list-title">
+                    <p className="eyebrow">Registered Students</p>
+                    <strong>{registrationsForRegisterEvent.length}</strong>
+                  </div>
+                  <div className="registered-list">
+                    {registrationsForRegisterEvent.map((registration) => {
+                      const student = studentMap.get(registration.studentIc) || {};
+                      return (
+                        <div className="registered-row" key={registration.id}>
+                          <div className="registered-top">
+                            <div>
+                              <strong>{displayStudentName(student, registration.studentIc)}</strong>
+                              <small>{student.className || registration.className} - {student.gender || '-'} - {registration.house}</small>
+                            </div>
+                            <button className="position clear" type="button" onClick={() => toggleRegistration({ ...student, ic: registration.studentIc })}>Remove</button>
                           </div>
-                          <button className="position clear" type="button" onClick={() => toggleRegistration({ ...student, ic: registration.studentIc })}>Remove</button>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
