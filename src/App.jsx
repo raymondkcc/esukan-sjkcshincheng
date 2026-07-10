@@ -330,16 +330,22 @@ function App() {
   const registerEligibility = getEventEligibility(registerEvent);
   const registerEffectiveClassFilter = registerEligibility.year ? String(registerEligibility.year) : registerClassFilter;
   const registerEffectiveGenderFilter = registerEligibility.gender || registerGenderFilter;
-  const registerCandidates = students.filter((student) => {
-    const query = registerQuery.trim().toLowerCase();
-    const matchesQuery = !query || [student.name, student.chineseName, student.className, student.gender, student.house].some((value) =>
-      String(value || '').toLowerCase().includes(query),
-    );
-    const matchesHouse = !registerHouse || houseMatchKey(student.house) === houseMatchKey(registerHouse);
-    const matchesYear = !registerEffectiveClassFilter || String(getYear(student.className)) === String(registerEffectiveClassFilter);
-    const matchesGender = !registerEffectiveGenderFilter || String(student.gender || '') === registerEffectiveGenderFilter;
-    return matchesQuery && matchesHouse && matchesYear && matchesGender;
-  });
+  const registerCandidates = students
+    .filter((student) => {
+      const query = registerQuery.trim().toLowerCase();
+      const matchesQuery = !query || [student.name, student.chineseName, student.className, student.gender, student.house].some((value) =>
+        String(value || '').toLowerCase().includes(query),
+      );
+      const matchesHouse = !registerHouse || houseMatchKey(student.house) === houseMatchKey(registerHouse);
+      const matchesYear = !registerEffectiveClassFilter || String(getYear(student.className)) === String(registerEffectiveClassFilter);
+      const matchesGender = !registerEffectiveGenderFilter || String(student.gender || '') === registerEffectiveGenderFilter;
+      return matchesQuery && matchesHouse && matchesYear && matchesGender;
+    })
+    .sort((a, b) => {
+      const classCompare = String(a.className || '').localeCompare(String(b.className || ''), undefined, { numeric: true });
+      if (classCompare) return classCompare;
+      return String(a.name || '').localeCompare(String(b.name || ''));
+    });
 
   const scoreData = useMemo(() => {
     const houseTotals = houses.map((house) => ({ name: house, total: 0 }));
