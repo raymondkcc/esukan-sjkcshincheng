@@ -60,6 +60,22 @@ const DEFAULT_EVENT_FORM = {
   points4: 3,
   points5: 0,
 };
+const TEACHER_PASSWORD = 'BBC8419';
+const ADMIN_PASSWORD = 'BBC8419adm';
+const ACCESS_LEVELS = {
+  user: {
+    label: 'Live View',
+    tabs: ['live'],
+  },
+  teacher: {
+    label: 'Teacher',
+    tabs: ['live', 'students', 'events', 'register', 'slips', 'settings'],
+  },
+  admin: {
+    label: 'Admin',
+    tabs: ['live', 'students', 'events', 'register', 'results', 'slips', 'settings'],
+  },
+};
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -126,6 +142,10 @@ function App() {
   const siteId = params.get('site') || import.meta.env.VITE_ESUKAN_SITE_ID || 'sinming-esukan';
 
   const [activeTab, setActiveTab] = useState('live');
+  const [accessRole, setAccessRole] = useState(() => localStorage.getItem('esukan-access-role') || 'user');
+  const [loginMode, setLoginMode] = useState('');
+  const [accessPassword, setAccessPassword] = useState('');
+  const [accessError, setAccessError] = useState('');
   const [theme, setTheme] = useState(() => localStorage.getItem('esukan-theme') || 'light');
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState('');
@@ -155,10 +175,19 @@ function App() {
     const source = Array.isArray(settings.houses) ? settings.houses : DEFAULT_HOUSES;
     return source.map(normalizeHouse).filter(Boolean);
   }, [settings.houses]);
+  const visibleTabs = ACCESS_LEVELS[accessRole]?.tabs || ACCESS_LEVELS.user.tabs;
 
   useEffect(() => {
     localStorage.setItem('esukan-theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem('esukan-access-role', accessRole);
+  }, [accessRole]);
+
+  useEffect(() => {
+    if (!visibleTabs.includes(activeTab)) setActiveTab('live');
+  }, [activeTab, visibleTabs]);
 
   useEffect(() => {
     if (!refs) return undefined;
@@ -275,6 +304,10 @@ function App() {
   });
 
   const saveSettings = async () => {
+    if (accessRole === 'user') {
+      setNotice('Staff access required.');
+      return;
+    }
     await setDoc(refs.settings, { ...settings, houses, updatedAt: serverTimestamp() }, { merge: true });
     setNotice('Settings saved.');
   };
@@ -293,6 +326,10 @@ function App() {
 
   const saveBulkEvents = async (submitEvent) => {
     submitEvent.preventDefault();
+    if (accessRole === 'user') {
+      setNotice('Staff access required.');
+      return;
+    }
     const baseName = eventForm.baseName.trim();
     if (!baseName || eventForm.categories.length === 0) return;
 
@@ -338,6 +375,10 @@ function App() {
 
   const importStudents = async (file) => {
     if (!file) return;
+    if (accessRole === 'user') {
+      setNotice('Staff access required.');
+      return;
+    }
 
     const XLSX = await import('xlsx');
     const workbook = XLSX.read(await file.arrayBuffer());
@@ -408,6 +449,10 @@ function App() {
   };
 
   const toggleRegistration = async (student) => {
+    if (accessRole === 'user') {
+      setNotice('Staff access required.');
+      return;
+    }
     if (!registerEvent) {
       setNotice('Choose an event first.');
       return;
@@ -438,6 +483,10 @@ function App() {
   };
 
   const updateResult = async (registration, position) => {
+    if (accessRole !== 'admin') {
+      setNotice('Admin access required.');
+      return;
+    }
     const event = eventMap.get(registration.eventId);
     const points = event && position ? Number(event.scoring?.[position] || 0) : 0;
     await setDoc(doc(refs.registrations, registration.id), {
@@ -449,6 +498,10 @@ function App() {
   };
 
   const deleteEvent = async (eventId) => {
+    if (accessRole === 'user') {
+      setNotice('Staff access required.');
+      return;
+    }
     const batch = writeBatch(db);
     registrations.filter((registration) => registration.eventId === eventId).forEach((registration) => {
       batch.delete(doc(refs.registrations, registration.id));
@@ -466,6 +519,10 @@ function App() {
   };
 
   const printResultSlip = () => {
+    if (accessRole === 'user') {
+      setNotice('Staff access required.');
+      return;
+    }
     if (!slipEvent) {
       setNotice('Choose an event first.');
       return;
@@ -527,6 +584,41 @@ function App() {
     printWindow.document.close();
   };
 
+  const openLogin = (mode) => {
+    setLoginMode(mode);
+    setAccessPassword('');
+    setAccessError('');
+  };
+
+  const submitAccess = (event) => {
+    event.preventDefault();
+    const password = accessPassword.trim();
+    if (loginMode === 'teacher' && password === TEACHER_PASSWORD) {
+      setAccessRole('teacher');
+      setLoginMode('');
+      setActiveTab('students');
+      setNotice('Teacher view enabled.');
+      return;
+    }
+    if (loginMode === 'admin' && password === ADMIN_PASSWORD) {
+      setAccessRole('admin');
+      setLoginMode('');
+      setActiveTab('students');
+      setNotice('Admin view enabled.');
+      return;
+    }
+    setAccessError('Wrong password.');
+  };
+
+  const returnToLiveView = () => {
+    setAccessRole('user');
+    setLoginMode('');
+    setAccessPassword('');
+    setAccessError('');
+    setActiveTab('live');
+    setNotice('Live view enabled.');
+  };
+
   if (!hasFirebaseConfig) {
     return (
       <main className="config-screen">
@@ -539,7 +631,7 @@ function App() {
     );
   }
 
-  const tabs = [
+  const allTabs = [
     ['live', Monitor, 'Live Board'],
     ['students', Users, 'Students'],
     ['events', Trophy, 'Events'],
@@ -548,6 +640,7 @@ function App() {
     ['slips', Printer, 'Slips'],
     ['settings', Settings, 'Settings'],
   ];
+  const tabs = allTabs.filter(([id]) => visibleTabs.includes(id));
 
   return (
     <div className={`app-shell theme-${theme}`}>
@@ -558,19 +651,45 @@ function App() {
           <p className="subtle">Realtime score management for sports day</p>
         </div>
         <div className="top-actions">
-          <nav className="tabbar">
-            {tabs.map(([id, Icon, label]) => (
-              <button key={id} type="button" className={activeTab === id ? 'tab active' : 'tab'} onClick={() => setActiveTab(id)}>
-                <Icon size={16} />
-                {label}
-              </button>
-            ))}
-          </nav>
+          {tabs.length > 1 ? (
+            <nav className="tabbar">
+              {tabs.map(([id, Icon, label]) => (
+                <button key={id} type="button" className={activeTab === id ? 'tab active' : 'tab'} onClick={() => setActiveTab(id)}>
+                  <Icon size={16} />
+                  {label}
+                </button>
+              ))}
+            </nav>
+          ) : <div className="viewer-pill">Live Board</div>}
+          <div className="access-controls">
+            <span>{ACCESS_LEVELS[accessRole]?.label || 'Live View'}</span>
+            {accessRole !== 'user' && <button type="button" onClick={returnToLiveView}>Live View</button>}
+            <button type="button" onClick={() => openLogin('teacher')}>Teacher</button>
+            <button type="button" onClick={() => openLogin('admin')}>Admin</button>
+          </div>
           <button className="theme-toggle" type="button" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} title="Toggle theme">
             {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
           </button>
         </div>
       </header>
+
+      {loginMode && (
+        <div className="access-modal" role="dialog" aria-modal="true">
+          <form className="access-card" onSubmit={submitAccess}>
+            <p className="eyebrow">{loginMode === 'admin' ? 'Admin' : 'Teacher'} access</p>
+            <h2>{loginMode === 'admin' ? 'Open Admin View' : 'Open Teacher View'}</h2>
+            <label>
+              Password
+              <input autoFocus type="password" value={accessPassword} onChange={(event) => setAccessPassword(event.target.value)} />
+            </label>
+            {accessError && <p className="access-error">{accessError}</p>}
+            <div className="access-actions">
+              <button type="button" className="secondary-button" onClick={() => setLoginMode('')}>Cancel</button>
+              <button type="submit" className="primary-button">Open</button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {notice && <button className="notice" type="button" onClick={() => setNotice('')}>{notice}</button>}
 
@@ -649,7 +768,7 @@ function App() {
           </section>
         )}
 
-        {activeTab === 'students' && (
+        {activeTab === 'students' && visibleTabs.includes('students') && (
           <section className="split-grid">
             <div className="panel control-panel">
               <div className="section-head">
@@ -693,7 +812,7 @@ function App() {
           </section>
         )}
 
-        {activeTab === 'events' && (
+        {activeTab === 'events' && visibleTabs.includes('events') && (
           <section className="event-layout">
             <form className="panel control-panel" onSubmit={saveBulkEvents}>
               <div className="section-head">
@@ -775,7 +894,7 @@ function App() {
           </section>
         )}
 
-        {activeTab === 'register' && (
+        {activeTab === 'register' && visibleTabs.includes('register') && (
           <section className="register-layout">
             <div className="panel control-panel">
               <div className="section-head">
@@ -846,7 +965,7 @@ function App() {
           </section>
         )}
 
-        {activeTab === 'results' && (
+        {activeTab === 'results' && visibleTabs.includes('results') && accessRole === 'admin' && (
           <section className="results-entry-grid">
             <div className="panel control-panel">
               <div className="section-head">
@@ -899,7 +1018,7 @@ function App() {
           </section>
         )}
 
-        {activeTab === 'slips' && (
+        {activeTab === 'slips' && visibleTabs.includes('slips') && (
           <section className="split-grid">
             <div className="panel control-panel">
               <div className="section-head">
@@ -948,7 +1067,7 @@ function App() {
           </section>
         )}
 
-        {activeTab === 'settings' && (
+        {activeTab === 'settings' && visibleTabs.includes('settings') && (
           <section className="settings-grid">
             <div className="panel settings-panel">
               <div className="section-head">
