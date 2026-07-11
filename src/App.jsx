@@ -2273,7 +2273,8 @@ function App() {
                       min="1"
                       max="8"
                       value={eventForm.teamCountPerHouse}
-                      onChange={(event) => setEventForm({ ...eventForm, teamCountPerHouse: clampTeamCountPerHouse(event.target.value) })}
+                      onChange={(event) => setEventForm({ ...eventForm, teamCountPerHouse: event.target.value })}
+                      onBlur={(event) => setEventForm({ ...eventForm, teamCountPerHouse: clampTeamCountPerHouse(event.target.value) })}
                     />
                   </label>
                   <p className="help-text">{t('noStudentAutoHelp')} {t('teamsPerHouseHelp')}</p>
@@ -2350,7 +2351,8 @@ function App() {
                                   min="1"
                                   max="8"
                                   value={eventEditForm.teamCountPerHouse}
-                                  onChange={(inputEvent) => setEventEditForm({ ...eventEditForm, teamCountPerHouse: clampTeamCountPerHouse(inputEvent.target.value) })}
+                                  onChange={(inputEvent) => setEventEditForm({ ...eventEditForm, teamCountPerHouse: inputEvent.target.value })}
+                                  onBlur={(inputEvent) => setEventEditForm({ ...eventEditForm, teamCountPerHouse: clampTeamCountPerHouse(inputEvent.target.value) })}
                                 />
                               )}
                             </div>
