@@ -38,6 +38,7 @@ const DEFAULT_HOUSES = ['红B组', '黄A组', '红A组', '青B组', '蓝A组', '
 const CATEGORY_ORDER = [
   'L1', 'P1', 'L2', 'P2', 'L3', 'P3',
   'L4', 'P4', 'L5', 'P5', 'L6', 'P6',
+  'Tahun 1', 'Tahun 2', 'Tahun 3', 'Tahun 4', 'Tahun 5', 'Tahun 6',
   'Tahap 1 (L)', 'Tahap 1 (P)', 'Tahap 1 (Terbuka)',
   'Tahap Dua (L)', 'Tahap Dua (P)', 'Tahap Dua (Campuran)',
   'Tahap 2 (Terbuka)',
@@ -612,11 +613,13 @@ const resultPlaceLabel = (position) => RESULT_PLACE_LABELS[Number(position || 0)
 const getEventEligibility = (event) => {
   const category = String(event?.category || '').trim().toLocaleUpperCase('ms-MY');
   const match = category.match(/^([LP])([1-6])$/);
-  if (!match) return { year: 0, gender: '' };
-  return {
+  if (match) return {
     year: Number(match[2]),
     gender: match[1] === 'L' ? 'Lelaki' : 'Perempuan',
   };
+  const yearMatch = category.match(/^TAHUN\s*([1-6])$/);
+  if (yearMatch) return { year: Number(yearMatch[1]), gender: '' };
+  return { year: 0, gender: '' };
 };
 const getCell = (row, names) => {
   const keys = Object.keys(row || {});
