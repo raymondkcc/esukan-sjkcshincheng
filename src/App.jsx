@@ -155,6 +155,90 @@ const TEXT = {
     houseEntry: 'Penyertaan rumah',
     student: 'Murid',
     print: 'Cetak',
+    appTitle: 'Sistem e-Sukan',
+    template: 'Templat',
+    studentNamelist: 'Senarai Nama Murid',
+    downloadExcelTemplate: 'Muat Turun Templat Excel',
+    uploading: 'Memuat naik...',
+    uploadCompletedList: 'Muat Naik Senarai Lengkap',
+    uploadingStudentsTitle: 'Memuat naik senarai nama murid',
+    savingFirebase: 'Menyimpan ke Firebase. Sila kekalkan halaman ini terbuka.',
+    search: 'Cari',
+    allClasses: 'Semua kelas',
+    allGenders: 'Semua jantina',
+    allHouses: 'Semua rumah',
+    showing: 'Dipaparkan',
+    total: 'Jumlah',
+    clearSearchFilters: 'Kosongkan Carian & Tapisan',
+    requiredColumnsHelp: 'Lajur wajib: Name, Kelas, Rumah Sukan / House, Jantina/Gender. Guna Lelaki/Male/Boy atau Perempuan/Female/Girl. Lajur pilihan: 姓名.',
+    chineseName: 'Nama Cina',
+    gender: 'Jantina',
+    save: 'Simpan',
+    cancel: 'Batal',
+    editStudent: 'Edit murid',
+    deleteStudent: 'Padam murid',
+    choose: 'Pilih',
+    male: 'Lelaki',
+    female: 'Perempuan',
+    bulkSetup: 'Tetapan pukal',
+    startNo: 'No mula',
+    type: 'Jenis',
+    individual: 'Individu',
+    group: 'Kumpulan',
+    mainEventName: 'Nama acara utama',
+    sampleEventName: 'Lari 100m',
+    eventKind: 'Jenis acara',
+    mainKind: 'Utama',
+    extraKind: 'Tambahan',
+    parentKind: 'Ibu Bapa',
+    teacherKind: 'Guru',
+    withoutStudentDetails: 'Tanpa butiran murid',
+    noStudentAutoHelp: 'Semua rumah akan didaftarkan secara automatik. Kemasukan keputusan akan memberi markah kepada rumah sahaja.',
+    categories: 'Kategori',
+    saveBulkEvents: 'Simpan Acara Pukal',
+    no: 'No',
+    category: 'Kategori',
+    mode: 'Mod',
+    scoring: 'Skor',
+    entries: 'Penyertaan',
+    editEvent: 'Edit acara',
+    deleteEvent: 'Padam acara',
+    houseOnly: 'Rumah sahaja',
+    participants: 'Peserta',
+    noStudentRegisterHelp: 'Acara ini tidak memerlukan pendaftaran murid. Semua rumah didaftarkan secara automatik daripada tetapan rumah.',
+    year: 'Tahun',
+    allYears: 'Semua tahun',
+    eventShowsPrefix: 'Acara ini memaparkan',
+    houseEvent: 'Acara rumah',
+    availableStudents: 'Murid tersedia',
+    studentPool: 'Senarai murid',
+    registeredHouses: 'Rumah berdaftar',
+    registeredStudents: 'Murid berdaftar',
+    remove: 'Buang',
+    judging: 'Pengadilan',
+    general: 'Umum',
+    eSukanSettings: 'Tetapan e-Sukan',
+    schoolName: 'Nama sekolah',
+    eventTitle: 'Tajuk kejohanan',
+    houses: 'Rumah sukan',
+    liveBoardSetting: 'Papan markah',
+    totalOnly: 'Jumlah markah masa nyata sahaja',
+    totalAndClass: 'Jumlah markah + markah kelas',
+    liveBoardSmallHeader: 'Tajuk kecil papan markah',
+    liveBoardMainTitle: 'Tajuk utama papan markah',
+    saveSettings: 'Simpan Tetapan',
+    rules: 'Peraturan',
+    participationLimits: 'Had Penyertaan',
+    tarikTaliQuota: 'Kuota Tarik Tali setiap rumah/tahun',
+    registrations: 'Pendaftaran',
+    password: 'Kata laluan',
+    adminAccess: 'Akses admin',
+    teacherAccess: 'Akses guru',
+    openAdminView: 'Buka Paparan Admin',
+    openTeacherView: 'Buka Paparan Guru',
+    open: 'Buka',
+    firebaseMissing: 'Konfigurasi Firebase tiada',
+    firebaseHelp: 'Tambah nilai VITE_FIREBASE_* dalam folder ini atau tetapan projek Vercel.',
   },
   en: {
     liveBoard: 'Live Board',
@@ -220,6 +304,90 @@ const TEXT = {
     houseEntry: 'House entry',
     student: 'Student',
     print: 'Print',
+    appTitle: 'e-Sukan System',
+    template: 'Template',
+    studentNamelist: 'Student Namelist',
+    downloadExcelTemplate: 'Download Excel Template',
+    uploading: 'Uploading...',
+    uploadCompletedList: 'Upload Completed List',
+    uploadingStudentsTitle: 'Uploading student namelist',
+    savingFirebase: 'Saving to Firebase. Please keep this page open.',
+    search: 'Search',
+    allClasses: 'All classes',
+    allGenders: 'All genders',
+    allHouses: 'All houses',
+    showing: 'Showing',
+    total: 'Total',
+    clearSearchFilters: 'Clear Search & Filters',
+    requiredColumnsHelp: 'Required columns: Name, Kelas, Rumah Sukan / House, Jantina/Gender. Use Lelaki/Male/Boy or Perempuan/Female/Girl. Optional column: 姓名.',
+    chineseName: 'Chinese name',
+    gender: 'Gender',
+    save: 'Save',
+    cancel: 'Cancel',
+    editStudent: 'Edit student',
+    deleteStudent: 'Delete student',
+    choose: 'Choose',
+    male: 'Male',
+    female: 'Female',
+    bulkSetup: 'Bulk setup',
+    startNo: 'Start no',
+    type: 'Type',
+    individual: 'Individual',
+    group: 'Group',
+    mainEventName: 'Main event name',
+    sampleEventName: 'Lari 100m',
+    eventKind: 'Event kind',
+    mainKind: 'Main',
+    extraKind: 'Extra',
+    parentKind: 'Parents',
+    teacherKind: 'Teacher',
+    withoutStudentDetails: 'Without student details',
+    noStudentAutoHelp: 'All houses will be registered automatically. Results entry will score houses only.',
+    categories: 'Categories',
+    saveBulkEvents: 'Save Bulk Events',
+    no: 'No',
+    category: 'Category',
+    mode: 'Mode',
+    scoring: 'Scoring',
+    entries: 'Entries',
+    editEvent: 'Edit event',
+    deleteEvent: 'Delete event',
+    houseOnly: 'House only',
+    participants: 'Participants',
+    noStudentRegisterHelp: 'This event does not need student registration. All houses are registered automatically from house settings.',
+    year: 'Year',
+    allYears: 'All years',
+    eventShowsPrefix: 'This event shows',
+    houseEvent: 'House event',
+    availableStudents: 'Available students',
+    studentPool: 'Student Pool',
+    registeredHouses: 'Registered Houses',
+    registeredStudents: 'Registered Students',
+    remove: 'Remove',
+    judging: 'Judging',
+    general: 'General',
+    eSukanSettings: 'e-Sukan Settings',
+    schoolName: 'School name',
+    eventTitle: 'Event title',
+    houses: 'Houses',
+    liveBoardSetting: 'Live board',
+    totalOnly: 'Realtime total marks only',
+    totalAndClass: 'Total marks + class marks',
+    liveBoardSmallHeader: 'Live board small header',
+    liveBoardMainTitle: 'Live board main title',
+    saveSettings: 'Save Settings',
+    rules: 'Rules',
+    participationLimits: 'Participation Limits',
+    tarikTaliQuota: 'Tarik Tali quota per house/year',
+    registrations: 'Registrations',
+    password: 'Password',
+    adminAccess: 'Admin access',
+    teacherAccess: 'Teacher access',
+    openAdminView: 'Open Admin View',
+    openTeacherView: 'Open Teacher View',
+    open: 'Open',
+    firebaseMissing: 'Firebase config missing',
+    firebaseHelp: 'Add the VITE_FIREBASE_* values in this folder or in Vercel project settings.',
   },
   zh: {
     liveBoard: '即时积分榜',
@@ -285,6 +453,90 @@ const TEXT = {
     houseEntry: '运动组项目',
     student: '学生',
     print: '打印',
+    appTitle: 'e-Sukan 系统',
+    template: '模板',
+    studentNamelist: '学生名单',
+    downloadExcelTemplate: '下载 Excel 模板',
+    uploading: '上传中...',
+    uploadCompletedList: '上传完整名单',
+    uploadingStudentsTitle: '正在上传学生名单',
+    savingFirebase: '正在保存到 Firebase。请保持此页面开启。',
+    search: '搜索',
+    allClasses: '全部班级',
+    allGenders: '全部性别',
+    allHouses: '全部运动组',
+    showing: '显示',
+    total: '总数',
+    clearSearchFilters: '清除搜索和筛选',
+    requiredColumnsHelp: '必填栏位：Name、Kelas、Rumah Sukan / House、Jantina/Gender。请使用 Lelaki/Male/Boy 或 Perempuan/Female/Girl。选填栏位：姓名。',
+    chineseName: '中文姓名',
+    gender: '性别',
+    save: '保存',
+    cancel: '取消',
+    editStudent: '编辑学生',
+    deleteStudent: '删除学生',
+    choose: '选择',
+    male: '男',
+    female: '女',
+    bulkSetup: '批量设置',
+    startNo: '起始编号',
+    type: '类型',
+    individual: '个人',
+    group: '团体',
+    mainEventName: '主项目名称',
+    sampleEventName: '100米赛跑',
+    eventKind: '项目类别',
+    mainKind: '主要',
+    extraKind: '附加',
+    parentKind: '家长',
+    teacherKind: '教师',
+    withoutStudentDetails: '不使用学生资料',
+    noStudentAutoHelp: '所有运动组将自动报名。成绩录入只为运动组计分。',
+    categories: '组别',
+    saveBulkEvents: '保存批量项目',
+    no: '编号',
+    category: '组别',
+    mode: '模式',
+    scoring: '计分',
+    entries: '报名数',
+    editEvent: '编辑项目',
+    deleteEvent: '删除项目',
+    houseOnly: '仅运动组',
+    participants: '参赛者',
+    noStudentRegisterHelp: '此项目不需要学生报名。所有运动组会根据设置自动报名。',
+    year: '年级',
+    allYears: '全部年级',
+    eventShowsPrefix: '此项目显示',
+    houseEvent: '运动组项目',
+    availableStudents: '可报名学生',
+    studentPool: '学生名单',
+    registeredHouses: '已报名运动组',
+    registeredStudents: '已报名学生',
+    remove: '移除',
+    judging: '裁判',
+    general: '一般',
+    eSukanSettings: 'e-Sukan 设置',
+    schoolName: '学校名称',
+    eventTitle: '运动会标题',
+    houses: '运动组',
+    liveBoardSetting: '即时积分榜',
+    totalOnly: '只显示实时总分',
+    totalAndClass: '总分 + 班级分数',
+    liveBoardSmallHeader: '积分榜小标题',
+    liveBoardMainTitle: '积分榜主标题',
+    saveSettings: '保存设置',
+    rules: '规则',
+    participationLimits: '参赛限制',
+    tarikTaliQuota: '拔河每组/每年级名额',
+    registrations: '报名记录',
+    password: '密码',
+    adminAccess: '管理员权限',
+    teacherAccess: '教师权限',
+    openAdminView: '打开管理员页面',
+    openTeacherView: '打开教师页面',
+    open: '打开',
+    firebaseMissing: '缺少 Firebase 设置',
+    firebaseHelp: '请在此文件夹或 Vercel 项目设置中加入 VITE_FIREBASE_* 数值。',
   },
 };
 
@@ -463,6 +715,27 @@ function App() {
   const nextEventNo = useMemo(() => Math.max(0, ...events.map((event) => Number(event.no || 0))) + 1, [events]);
   const currentLanguage = LANGUAGE_OPTIONS.find((item) => item.id === language) || LANGUAGE_OPTIONS[0];
   const t = (key) => TEXT[language]?.[key] || TEXT.ms[key] || key;
+  const tGender = (value) => {
+    const key = normalizeGender(value);
+    if (key === 'Lelaki') return t('male');
+    if (key === 'Perempuan') return t('female');
+    return value || '-';
+  };
+  const tEventType = (value) => {
+    const key = String(value || '').toLocaleUpperCase('ms-MY');
+    if (key.includes('INDIVIDU')) return t('individual');
+    if (key.includes('KUMPULAN')) return t('group');
+    return value || '-';
+  };
+  const tEventKind = (value) => {
+    const key = String(value || '').toLocaleUpperCase('ms-MY');
+    if (key === 'UTAMA') return t('mainKind');
+    if (key === 'TAMBAHAN') return t('extraKind');
+    if (key === 'IBU BAPA') return t('parentKind');
+    if (key === 'GURU') return t('teacherKind');
+    return value || '-';
+  };
+  const tYear = (year) => (language === 'zh' ? `${year}年级` : language === 'en' ? `Year ${year}` : `Tahun ${year}`);
   const runScoreTransition = (callback) => {
     if (typeof document === 'undefined' || typeof document.startViewTransition !== 'function' || document.visibilityState !== 'visible') {
       callback();
@@ -1378,8 +1651,8 @@ function App() {
     return (
       <main className="config-screen">
         <section className="config-panel">
-          <h1>Firebase config missing</h1>
-          <p>Add the VITE_FIREBASE_* values in this folder or in Vercel project settings.</p>
+          <h1>{t('firebaseMissing')}</h1>
+          <p>{t('firebaseHelp')}</p>
           <code>cp .env.example .env.local</code>
         </section>
       </main>
@@ -1422,7 +1695,7 @@ function App() {
           <img className="site-logo" src={SCHOOL_LOGO_PATH} alt={`${settings.schoolName || DEFAULT_SETTINGS.schoolName} logo`} />
           <div>
             <p className="eyebrow">{settings.schoolName}</p>
-            <h1>Sistem e-Sukan</h1>
+            <h1>{t('appTitle')}</h1>
           </div>
         </div>
         <div className="top-actions">
@@ -1455,16 +1728,16 @@ function App() {
       {loginMode && (
         <div className="access-modal" role="dialog" aria-modal="true">
           <form className="access-card" onSubmit={submitAccess}>
-            <p className="eyebrow">{loginMode === 'admin' ? 'Admin' : 'Teacher'} access</p>
-            <h2>{loginMode === 'admin' ? 'Open Admin View' : 'Open Teacher View'}</h2>
+            <p className="eyebrow">{loginMode === 'admin' ? t('adminAccess') : t('teacherAccess')}</p>
+            <h2>{loginMode === 'admin' ? t('openAdminView') : t('openTeacherView')}</h2>
             <label>
-              Password
+              {t('password')}
               <input autoFocus type="password" value={accessPassword} onChange={(event) => setAccessPassword(event.target.value)} />
             </label>
             {accessError && <p className="access-error">{accessError}</p>}
             <div className="access-actions">
-              <button type="button" className="secondary-button" onClick={() => setLoginMode('')}>Cancel</button>
-              <button type="submit" className="primary-button">Open</button>
+              <button type="button" className="secondary-button" onClick={() => setLoginMode('')}>{t('cancel')}</button>
+              <button type="submit" className="primary-button">{t('open')}</button>
             </div>
           </form>
         </div>
@@ -1475,8 +1748,8 @@ function App() {
         <div className="upload-overlay" role="status" aria-live="polite">
           <div className="upload-card">
             <div className="spinner" aria-hidden="true" />
-            <strong>Uploading student namelist</strong>
-            <span>Saving to Firebase. Please keep this page open.</span>
+            <strong>{t('uploadingStudentsTitle')}</strong>
+            <span>{t('savingFirebase')}</span>
           </div>
         </div>
       )}
@@ -1589,7 +1862,7 @@ function App() {
                                 <b>{result.position}</b>
                                 <span>
                                   <strong>{displayEntryName(result, result.student)}</strong>
-                                  <small>{isHouseEntry(result) ? t('houseEntry') : `${result.student?.className || result.className || '-'} - ${result.house || result.student?.house || '-'}`}</small>
+                                  {!isHouseEntry(result) && <small>{`${result.student?.className || result.className || '-'} - ${result.house || result.student?.house || '-'}`}</small>}
                                 </span>
                                 <em>{result.points || 0}</em>
                               </div>
@@ -1610,48 +1883,48 @@ function App() {
             <div className="panel control-panel">
               <div className="section-head">
                 <div>
-                  <p className="eyebrow">Template</p>
-                  <h2>Student Namelist</h2>
+                  <p className="eyebrow">{t('template')}</p>
+                  <h2>{t('studentNamelist')}</h2>
                 </div>
                 <Users size={22} />
               </div>
               <button className="primary-button" type="button" onClick={downloadTemplate}>
-                <Download size={16} /> Download Excel Template
+                <Download size={16} /> {t('downloadExcelTemplate')}
               </button>
               <input ref={fileInputRef} hidden type="file" accept=".xlsx,.xls,.csv" onChange={(event) => importStudents(event.target.files?.[0])} />
               <button className="secondary-button" type="button" disabled={uploadingStudents} onClick={() => fileInputRef.current?.click()}>
-                <Upload size={16} /> {uploadingStudents ? 'Uploading...' : 'Upload Completed List'}
+                <Upload size={16} /> {uploadingStudents ? t('uploading') : t('uploadCompletedList')}
               </button>
               <label>
-                Search
-                <input value={studentQuery} onChange={(event) => setStudentQuery(event.target.value)} placeholder="Name, 姓名, kelas, gender, house" />
+                {t('search')}
+                <input value={studentQuery} onChange={(event) => setStudentQuery(event.target.value)} placeholder={`${t('name')}, ${t('chineseName')}, ${t('class')}, ${t('gender')}, ${t('house')}`} />
               </label>
               <div className="student-filter-grid">
                 <label>
-                  Kelas
+                  {t('class')}
                   <select value={studentClassFilter} onChange={(event) => setStudentClassFilter(event.target.value)}>
-                    <option value="">All classes</option>
+                    <option value="">{t('allClasses')}</option>
                     {studentClassOptions.map((className) => <option key={className} value={className}>{className}</option>)}
                   </select>
                 </label>
                 <label>
-                  Gender
+                  {t('gender')}
                   <select value={studentGenderFilter} onChange={(event) => setStudentGenderFilter(event.target.value)}>
-                    <option value="">All genders</option>
-                    {studentGenderOptions.map((gender) => <option key={gender} value={gender}>{gender}</option>)}
+                    <option value="">{t('allGenders')}</option>
+                    {studentGenderOptions.map((gender) => <option key={gender} value={gender}>{tGender(gender)}</option>)}
                   </select>
                 </label>
                 <label>
-                  House
+                  {t('house')}
                   <select value={studentHouseFilter} onChange={(event) => setStudentHouseFilter(event.target.value)}>
-                    <option value="">All houses</option>
+                    <option value="">{t('allHouses')}</option>
                     {studentHouseOptions.map((house) => <option key={house} value={house}>{house}</option>)}
                   </select>
                 </label>
               </div>
               <div className="stats-box">
-                <span>Showing: <b>{filteredStudents.length}</b></span>
-                <span>Total: <b>{students.length}</b></span>
+                <span>{t('showing')}: <b>{filteredStudents.length}</b></span>
+                <span>{t('total')}: <b>{students.length}</b></span>
               </div>
               <button
                 className="secondary-button"
@@ -1663,15 +1936,15 @@ function App() {
                   setStudentHouseFilter('');
                 }}
               >
-                Clear Search & Filters
+                {t('clearSearchFilters')}
               </button>
-              <p className="help-text">Required columns: Name, Kelas, Rumah Sukan / House, Jantina/Gender. Use Lelaki/Male/Boy or Perempuan/Female/Girl. Optional column: 姓名.</p>
+              <p className="help-text">{t('requiredColumnsHelp')}</p>
             </div>
 
             <div className="panel table-panel">
               <table>
                 <thead>
-                  <tr><th>Name</th><th>姓名</th><th>Kelas</th><th>Gender</th><th>House</th><th></th></tr>
+                  <tr><th>{t('name')}</th><th>{t('chineseName')}</th><th>{t('class')}</th><th>{t('gender')}</th><th>{t('house')}</th><th></th></tr>
                 </thead>
                 <tbody>
                   {filteredStudents.map((student) => {
@@ -1697,11 +1970,11 @@ function App() {
                         <td>
                           {editing ? (
                             <select value={studentEditForm.gender} onChange={(event) => setStudentEditForm({ ...studentEditForm, gender: event.target.value })}>
-                              <option value="">Choose</option>
-                              <option value="Lelaki">Lelaki</option>
-                              <option value="Perempuan">Perempuan</option>
+                              <option value="">{t('choose')}</option>
+                              <option value="Lelaki">{t('male')}</option>
+                              <option value="Perempuan">{t('female')}</option>
                             </select>
-                          ) : (student.gender || '-')}
+                          ) : tGender(student.gender)}
                         </td>
                         <td>
                           {editing ? (
@@ -1712,13 +1985,13 @@ function App() {
                           <div className="row-actions">
                             {editing ? (
                               <>
-                                <button className="small-button" type="button" onClick={() => saveStudentEdit(student)}>Save</button>
-                                <button className="small-button muted" type="button" onClick={cancelStudentEdit}>Cancel</button>
+                                <button className="small-button" type="button" onClick={() => saveStudentEdit(student)}>{t('save')}</button>
+                                <button className="small-button muted" type="button" onClick={cancelStudentEdit}>{t('cancel')}</button>
                               </>
                             ) : (
                               <>
-                                <button className="icon-button" title="Edit student" type="button" onClick={() => startStudentEdit(student)}><SquarePen size={16} /></button>
-                                <button className="icon-button danger" title="Delete student" type="button" onClick={() => deleteStudent(student)}><Trash2 size={16} /></button>
+                                <button className="icon-button" title={t('editStudent')} type="button" onClick={() => startStudentEdit(student)}><SquarePen size={16} /></button>
+                                <button className="icon-button danger" title={t('deleteStudent')} type="button" onClick={() => deleteStudent(student)}><Trash2 size={16} /></button>
                               </>
                             )}
                           </div>
@@ -1740,46 +2013,46 @@ function App() {
             <form className="panel control-panel" onSubmit={saveBulkEvents}>
               <div className="section-head">
                 <div>
-                  <p className="eyebrow">Bulk setup</p>
-                  <h2>Events</h2>
+                  <p className="eyebrow">{t('bulkSetup')}</p>
+                  <h2>{t('events')}</h2>
                 </div>
                 <Trophy size={22} />
               </div>
               <div className="inline-fields">
                 <label>
-                  Start no
+                  {t('startNo')}
                   <input type="number" value={eventForm.startNo} onChange={(event) => setEventForm({ ...eventForm, startNo: Number(event.target.value) })} />
                 </label>
                 <label>
-                  Type
+                  {t('type')}
                   <select value={eventForm.type} onChange={(event) => setEventForm({ ...eventForm, type: event.target.value })}>
-                    <option>Individu</option>
-                    <option>Kumpulan</option>
+                    <option value="Individu">{t('individual')}</option>
+                    <option value="Kumpulan">{t('group')}</option>
                   </select>
                 </label>
               </div>
               <label>
-                Main event name
-                <input required value={eventForm.baseName} onChange={(event) => setEventForm({ ...eventForm, baseName: event.target.value })} placeholder="Lari 100m" />
+                {t('mainEventName')}
+                <input required value={eventForm.baseName} onChange={(event) => setEventForm({ ...eventForm, baseName: event.target.value })} placeholder={t('sampleEventName')} />
               </label>
               <label>
-                Event kind
+                {t('eventKind')}
                 <select value={eventForm.kind} onChange={(event) => setEventForm({ ...eventForm, kind: event.target.value })}>
-                  <option>Utama</option>
-                  <option>Tambahan</option>
-                  <option>Ibu Bapa</option>
-                  <option>Guru</option>
+                  <option value="Utama">{t('mainKind')}</option>
+                  <option value="Tambahan">{t('extraKind')}</option>
+                  <option value="Ibu Bapa">{t('parentKind')}</option>
+                  <option value="Guru">{t('teacherKind')}</option>
                 </select>
               </label>
               <label className="check-row">
                 <input type="checkbox" checked={eventForm.withoutStudent} onChange={(event) => setEventForm({ ...eventForm, withoutStudent: event.target.checked })} />
-                <span>Without student details</span>
+                <span>{t('withoutStudentDetails')}</span>
               </label>
-              {eventForm.withoutStudent && <p className="help-text">All houses will be registered automatically. Results entry will score houses only.</p>}
+              {eventForm.withoutStudent && <p className="help-text">{t('noStudentAutoHelp')}</p>}
               <div className="category-picker">
                 <div className="category-actions">
-                  <span>Categories</span>
-                  <button type="button" onClick={() => setEventForm({ ...eventForm, categories: [...CATEGORY_ORDER] })}>Select all</button>
+                  <span>{t('categories')}</span>
+                  <button type="button" onClick={() => setEventForm({ ...eventForm, categories: [...CATEGORY_ORDER] })}>{t('selectAll')}</button>
                 </div>
                 <div className="category-grid">
                   {CATEGORY_ORDER.map((category) => (
@@ -1797,13 +2070,13 @@ function App() {
                   </label>
                 ))}
               </div>
-              <button className="primary-button" type="submit"><Save size={16} /> Save Bulk Events</button>
+              <button className="primary-button" type="submit"><Save size={16} /> {t('saveBulkEvents')}</button>
             </form>
 
             <div className="panel table-panel">
               <table>
                 <thead>
-                  <tr><th>No</th><th>Event</th><th>Category</th><th>Type</th><th>Mode</th><th>Scoring</th><th>Entries</th><th></th></tr>
+                  <tr><th>{t('no')}</th><th>{t('event')}</th><th>{t('category')}</th><th>{t('type')}</th><th>{t('mode')}</th><th>{t('scoring')}</th><th>{t('entries')}</th><th></th></tr>
                 </thead>
                 <tbody>
                   {events.map((event) => {
@@ -1828,18 +2101,18 @@ function App() {
                         <td>
                           {editing ? (
                             <select value={eventEditForm.type} onChange={(inputEvent) => setEventEditForm({ ...eventEditForm, type: inputEvent.target.value })}>
-                              <option>Individu</option>
-                              <option>Kumpulan</option>
+                              <option value="Individu">{t('individual')}</option>
+                              <option value="Kumpulan">{t('group')}</option>
                             </select>
-                          ) : event.type}
+                          ) : tEventType(event.type)}
                         </td>
                         <td>
                           {editing ? (
                             <label className="table-check">
                               <input type="checkbox" checked={eventEditForm.withoutStudent} onChange={(inputEvent) => setEventEditForm({ ...eventEditForm, withoutStudent: inputEvent.target.checked })} />
-                              House
+                              {t('house')}
                             </label>
-                          ) : (event.withoutStudent ? 'House only' : 'Student')}
+                          ) : (event.withoutStudent ? t('houseOnly') : t('student'))}
                         </td>
                         <td>
                           {editing ? (
@@ -1847,7 +2120,7 @@ function App() {
                               {[1, 2, 3, 4, 5].map((position) => (
                                 <input
                                   key={position}
-                                  aria-label={`Position ${position} points`}
+                                  aria-label={`${t('position')} ${position} ${t('points')}`}
                                   type="number"
                                   value={eventEditForm[`points${position}`]}
                                   onChange={(inputEvent) => setEventEditForm({ ...eventEditForm, [`points${position}`]: inputEvent.target.value })}
@@ -1861,13 +2134,13 @@ function App() {
                           <div className="row-actions">
                             {editing ? (
                               <>
-                                <button className="small-button" type="button" onClick={() => saveEventEdit(event)}>Save</button>
-                                <button className="small-button muted" type="button" onClick={cancelEventEdit}>Cancel</button>
+                                <button className="small-button" type="button" onClick={() => saveEventEdit(event)}>{t('save')}</button>
+                                <button className="small-button muted" type="button" onClick={cancelEventEdit}>{t('cancel')}</button>
                               </>
                             ) : (
                               <>
-                                <button className="icon-button" title="Edit event" type="button" onClick={() => startEventEdit(event)}><SquarePen size={16} /></button>
-                                <button className="icon-button danger" title="Delete event" type="button" onClick={() => deleteEvent(event.id)}><Trash2 size={16} /></button>
+                                <button className="icon-button" title={t('editEvent')} type="button" onClick={() => startEventEdit(event)}><SquarePen size={16} /></button>
+                                <button className="icon-button danger" title={t('deleteEvent')} type="button" onClick={() => deleteEvent(event.id)}><Trash2 size={16} /></button>
                               </>
                             )}
                           </div>
@@ -1889,54 +2162,54 @@ function App() {
             <div className="panel control-panel">
               <div className="section-head">
                 <div>
-                  <p className="eyebrow">Participants</p>
-                  <h2>Register</h2>
+                  <p className="eyebrow">{t('participants')}</p>
+                  <h2>{t('register')}</h2>
                 </div>
                 <ClipboardList size={22} />
               </div>
               <label>
-                Event
+                {t('event')}
                 <select value={registerEventId} onChange={(event) => setRegisterEventId(event.target.value)}>
-                  <option value="">Choose event</option>
+                  <option value="">{t('chooseEvent')}</option>
                   {events.map((event) => <option key={event.id} value={event.id}>{eventLabel(event)}</option>)}
                 </select>
               </label>
               {registerEvent?.withoutStudent && (
-                <p className="help-text">This event does not need student registration. All houses are registered automatically from house settings.</p>
+                <p className="help-text">{t('noStudentRegisterHelp')}</p>
               )}
               <label>
-                Search
-                <input value={registerQuery} onChange={(event) => setRegisterQuery(event.target.value)} placeholder="Name, 姓名, kelas, gender" />
+                {t('search')}
+                <input value={registerQuery} onChange={(event) => setRegisterQuery(event.target.value)} placeholder={`${t('name')}, ${t('chineseName')}, ${t('class')}, ${t('gender')}`} />
               </label>
               <label>
-                House
+                {t('house')}
                 <select value={registerHouse} onChange={(event) => setRegisterHouse(event.target.value)}>
-                  <option value="">All houses</option>
+                  <option value="">{t('allHouses')}</option>
                   {houses.map((house) => <option key={house} value={house}>{house}</option>)}
                 </select>
               </label>
               <div className="student-filter-grid">
                 <label>
-                  Year
+                  {t('year')}
                   <select value={registerEffectiveClassFilter} disabled={Boolean(registerEligibility.year)} onChange={(event) => setRegisterClassFilter(event.target.value)}>
-                    <option value="">All years</option>
-                    {[1, 2, 3, 4, 5, 6].map((year) => <option key={year} value={year}>Tahun {year}</option>)}
+                    <option value="">{t('allYears')}</option>
+                    {[1, 2, 3, 4, 5, 6].map((year) => <option key={year} value={year}>{tYear(year)}</option>)}
                   </select>
                 </label>
                 <label>
-                  Gender
+                  {t('gender')}
                   <select value={registerEffectiveGenderFilter} disabled={Boolean(registerEligibility.gender)} onChange={(event) => setRegisterGenderFilter(event.target.value)}>
-                    <option value="">All genders</option>
-                    {studentGenderOptions.map((gender) => <option key={gender} value={gender}>{gender}</option>)}
+                    <option value="">{t('allGenders')}</option>
+                    {studentGenderOptions.map((gender) => <option key={gender} value={gender}>{tGender(gender)}</option>)}
                   </select>
                 </label>
               </div>
               {registerEvent && (registerEligibility.year || registerEligibility.gender) && (
-                <p className="help-text">This event shows {registerEligibility.year ? `Tahun ${registerEligibility.year}` : 'all years'} {registerEligibility.gender || 'all genders'} students.</p>
+                <p className="help-text">{t('eventShowsPrefix')} {registerEligibility.year ? tYear(registerEligibility.year) : t('allYears')} {registerEligibility.gender ? tGender(registerEligibility.gender) : t('allGenders')} {t('students').toLowerCase()}.</p>
               )}
               <div className="stats-box">
-                <span>Registered: <b>{registrationsForRegisterEvent.length}</b></span>
-                <span>{registerEvent?.withoutStudent ? 'House event' : 'Available students'}: <b>{registerEvent?.withoutStudent ? registrationsForRegisterEvent.length : registerCandidates.length}</b></span>
+                <span>{t('registered')}: <b>{registrationsForRegisterEvent.length}</b></span>
+                <span>{registerEvent?.withoutStudent ? t('houseEvent') : t('availableStudents')}: <b>{registerEvent?.withoutStudent ? registrationsForRegisterEvent.length : registerCandidates.length}</b></span>
               </div>
               <button
                 className="secondary-button"
@@ -1948,7 +2221,7 @@ function App() {
                   setRegisterGenderFilter('');
                 }}
               >
-                Clear Search & Filters
+                {t('clearSearchFilters')}
               </button>
             </div>
 
@@ -1956,7 +2229,7 @@ function App() {
               <div className="entry-columns">
                 <div>
                   <div className="list-title">
-                    <p className="eyebrow">{registerEvent?.withoutStudent ? 'House Event' : 'Student Pool'}</p>
+                    <p className="eyebrow">{registerEvent?.withoutStudent ? t('houseEvent') : t('studentPool')}</p>
                     <strong>{registerCandidates.length}</strong>
                   </div>
                   <div className="student-picker">
@@ -1967,7 +2240,7 @@ function App() {
                         <button className={selected ? 'picker-row selected' : 'picker-row'} key={studentKey} type="button" onClick={() => toggleRegistration(student)}>
                           <span>
                             <strong>{displayStudentName(student)}</strong>
-                            <small>{student.className} - {student.gender || '-'} - {student.house}</small>
+                            <small>{student.className} - {tGender(student.gender)} - {student.house}</small>
                           </span>
                           <b>{selected ? 'IN' : '+'}</b>
                         </button>
@@ -1977,7 +2250,7 @@ function App() {
                 </div>
                 <div>
                   <div className="list-title">
-                    <p className="eyebrow">{registerEvent?.withoutStudent ? 'Registered Houses' : 'Registered Students'}</p>
+                    <p className="eyebrow">{registerEvent?.withoutStudent ? t('registeredHouses') : t('registeredStudents')}</p>
                     <strong>{registrationsForRegisterEvent.length}</strong>
                   </div>
                   <div className="registered-list">
@@ -1988,9 +2261,9 @@ function App() {
                           <div className="registered-top">
                             <div>
                               <strong>{displayEntryName(registration, student)}</strong>
-                              <small>{isHouseEntry(registration) ? 'House entry' : `${student.className || registration.className} - ${student.gender || '-'} - ${registration.house}`}</small>
+                              {!isHouseEntry(registration) && <small>{`${student.className || registration.className} - ${tGender(student.gender)} - ${registration.house}`}</small>}
                             </div>
-                            {!registerEvent?.withoutStudent && <button className="position clear" type="button" onClick={() => toggleRegistration({ ...student, ic: registration.studentIc })}>Remove</button>}
+                            {!registerEvent?.withoutStudent && <button className="position clear" type="button" onClick={() => toggleRegistration({ ...student, ic: registration.studentIc })}>{t('remove')}</button>}
                           </div>
                         </div>
                       );
@@ -2070,15 +2343,15 @@ function App() {
             <div className="panel control-panel">
               <div className="section-head">
                 <div>
-                  <p className="eyebrow">Judging</p>
-                  <h2>Results Entry</h2>
+                  <p className="eyebrow">{t('judging')}</p>
+                  <h2>{t('resultsEntry')}</h2>
                 </div>
                 <Medal size={22} />
               </div>
               <label>
-                Event
+                {t('event')}
                 <select value={resultEventId} onChange={(event) => setResultEventId(event.target.value)}>
-                  <option value="">Choose event</option>
+                  <option value="">{t('chooseEvent')}</option>
                   {events.map((event) => <option key={event.id} value={event.id}>{eventLabel(event)}</option>)}
                 </select>
               </label>
@@ -2099,7 +2372,7 @@ function App() {
                     <div className="registered-top">
                       <div>
                         <strong>{displayEntryName(registration, student)}</strong>
-                        <small>{isHouseEntry(registration) ? 'House entry' : `${student.className || registration.className} - ${student.gender || '-'} - ${registration.house}`}</small>
+                        {!isHouseEntry(registration) && <small>{`${student.className || registration.className} - ${tGender(student.gender)} - ${registration.house}`}</small>}
                       </div>
                       <b>{registration.points || 0}</b>
                     </div>
@@ -2109,7 +2382,7 @@ function App() {
                           {position}
                         </button>
                       ))}
-                      <button className="position clear" type="button" onClick={() => updateResult(registration, '')}>Clear</button>
+                      <button className="position clear" type="button" onClick={() => updateResult(registration, '')}>{t('clear')}</button>
                     </div>
                   </div>
                 );
@@ -2196,45 +2469,45 @@ function App() {
             <div className="panel settings-panel">
               <div className="section-head">
                 <div>
-                  <p className="eyebrow">General</p>
-                  <h2>e-Sukan Settings</h2>
+                  <p className="eyebrow">{t('general')}</p>
+                  <h2>{t('eSukanSettings')}</h2>
                 </div>
                 <Settings size={22} />
               </div>
-              <label>School name<input value={settings.schoolName || ''} onChange={(event) => setSettings({ ...settings, schoolName: event.target.value })} /></label>
-              <label>Event title<input value={settings.eventTitle || ''} onChange={(event) => setSettings({ ...settings, eventTitle: event.target.value })} /></label>
-              <label>Year<input type="number" value={settings.year || ''} onChange={(event) => setSettings({ ...settings, year: Number(event.target.value) })} /></label>
-              <label>Houses<textarea rows="4" value={houses.join('\n')} onChange={(event) => setSettings({ ...settings, houses: splitHouseList(event.target.value) })} /></label>
+              <label>{t('schoolName')}<input value={settings.schoolName || ''} onChange={(event) => setSettings({ ...settings, schoolName: event.target.value })} /></label>
+              <label>{t('eventTitle')}<input value={settings.eventTitle || ''} onChange={(event) => setSettings({ ...settings, eventTitle: event.target.value })} /></label>
+              <label>{t('year')}<input type="number" value={settings.year || ''} onChange={(event) => setSettings({ ...settings, year: Number(event.target.value) })} /></label>
+              <label>{t('houses')}<textarea rows="4" value={houses.join('\n')} onChange={(event) => setSettings({ ...settings, houses: splitHouseList(event.target.value) })} /></label>
               <label>
-                Live board
+                {t('liveBoardSetting')}
                 <select value={settings.liveBoardMode || 'total-only'} onChange={(event) => setSettings({ ...settings, liveBoardMode: event.target.value })}>
-                  <option value="total-only">Realtime total marks only</option>
-                  <option value="total-and-class">Total marks + class marks</option>
+                  <option value="total-only">{t('totalOnly')}</option>
+                  <option value="total-and-class">{t('totalAndClass')}</option>
                 </select>
               </label>
-              <label>Live board small header<input placeholder={settings.schoolName || DEFAULT_SETTINGS.schoolName} value={settings.liveBoardHeaderSchool || ''} onChange={(event) => setSettings({ ...settings, liveBoardHeaderSchool: event.target.value })} /></label>
-              <label>Live board main title<input placeholder={DEFAULT_SETTINGS.liveBoardHeaderTitle} value={settings.liveBoardHeaderTitle || ''} onChange={(event) => setSettings({ ...settings, liveBoardHeaderTitle: event.target.value })} /></label>
-              <button className="primary-button" type="button" onClick={saveSettings}><Save size={16} /> Save Settings</button>
+              <label>{t('liveBoardSmallHeader')}<input placeholder={settings.schoolName || DEFAULT_SETTINGS.schoolName} value={settings.liveBoardHeaderSchool || ''} onChange={(event) => setSettings({ ...settings, liveBoardHeaderSchool: event.target.value })} /></label>
+              <label>{t('liveBoardMainTitle')}<input placeholder={DEFAULT_SETTINGS.liveBoardHeaderTitle} value={settings.liveBoardHeaderTitle || ''} onChange={(event) => setSettings({ ...settings, liveBoardHeaderTitle: event.target.value })} /></label>
+              <button className="primary-button" type="button" onClick={saveSettings}><Save size={16} /> {t('saveSettings')}</button>
             </div>
 
             <div className="panel settings-panel">
               <div className="section-head">
-                <div><p className="eyebrow">Rules</p><h2>Participation Limits</h2></div>
+                <div><p className="eyebrow">{t('rules')}</p><h2>{t('participationLimits')}</h2></div>
                 <Medal size={22} />
               </div>
               <div className="inline-fields">
-                <label>Individu T1<input type="number" value={settings.maxIndividuTahap1 || 0} onChange={(event) => setSettings({ ...settings, maxIndividuTahap1: Number(event.target.value) })} /></label>
-                <label>Individu T2<input type="number" value={settings.maxIndividuTahap2 || 0} onChange={(event) => setSettings({ ...settings, maxIndividuTahap2: Number(event.target.value) })} /></label>
+                <label>{t('individual')} T1<input type="number" value={settings.maxIndividuTahap1 || 0} onChange={(event) => setSettings({ ...settings, maxIndividuTahap1: Number(event.target.value) })} /></label>
+                <label>{t('individual')} T2<input type="number" value={settings.maxIndividuTahap2 || 0} onChange={(event) => setSettings({ ...settings, maxIndividuTahap2: Number(event.target.value) })} /></label>
               </div>
               <div className="inline-fields">
-                <label>Kumpulan T1<input type="number" value={settings.maxKumpulanTahap1 || 0} onChange={(event) => setSettings({ ...settings, maxKumpulanTahap1: Number(event.target.value) })} /></label>
-                <label>Kumpulan T2<input type="number" value={settings.maxKumpulanTahap2 || 0} onChange={(event) => setSettings({ ...settings, maxKumpulanTahap2: Number(event.target.value) })} /></label>
+                <label>{t('group')} T1<input type="number" value={settings.maxKumpulanTahap1 || 0} onChange={(event) => setSettings({ ...settings, maxKumpulanTahap1: Number(event.target.value) })} /></label>
+                <label>{t('group')} T2<input type="number" value={settings.maxKumpulanTahap2 || 0} onChange={(event) => setSettings({ ...settings, maxKumpulanTahap2: Number(event.target.value) })} /></label>
               </div>
-              <label>Tarik Tali quota per house/year<input type="number" value={settings.maxTarikTaliPerHouseYear || 0} onChange={(event) => setSettings({ ...settings, maxTarikTaliPerHouseYear: Number(event.target.value) })} /></label>
+              <label>{t('tarikTaliQuota')}<input type="number" value={settings.maxTarikTaliPerHouseYear || 0} onChange={(event) => setSettings({ ...settings, maxTarikTaliPerHouseYear: Number(event.target.value) })} /></label>
               <div className="stats-box">
-                <span>Students: <b>{students.length}</b></span>
-                <span>Events: <b>{events.length}</b></span>
-                <span>Registrations: <b>{registrations.length}</b></span>
+                <span>{t('students')}: <b>{students.length}</b></span>
+                <span>{t('events')}: <b>{events.length}</b></span>
+                <span>{t('registrations')}: <b>{registrations.length}</b></span>
               </div>
             </div>
           </section>
