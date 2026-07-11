@@ -109,6 +109,7 @@ const DEFAULT_EVENT_FORM = {
   type: 'Individu',
   kind: 'Utama',
   withoutStudent: false,
+  teamCountPerHouse: 1,
   points1: 10,
   points2: 7,
   points3: 5,
@@ -246,6 +247,11 @@ const TEXT = {
     parentKind: 'Ibu Bapa',
     teacherKind: 'Guru',
     withoutStudentDetails: 'Tanpa butiran murid',
+    teamsPerHouse: 'Pasukan setiap rumah',
+    team: 'Pasukan',
+    registeredTeams: 'Pasukan berdaftar',
+    houseTeams: 'Pasukan rumah',
+    teamsPerHouseHelp: 'Gunakan 2 jika setiap rumah menghantar dua pasukan untuk acara yang sama.',
     noStudentAutoHelp: 'Semua rumah akan didaftarkan secara automatik. Kemasukan keputusan akan memberi markah kepada rumah sahaja.',
     categories: 'Kategori',
     saveBulkEvents: 'Simpan Acara Pukal',
@@ -396,6 +402,11 @@ const TEXT = {
     parentKind: 'Parents',
     teacherKind: 'Teacher',
     withoutStudentDetails: 'Without student details',
+    teamsPerHouse: 'Teams per house',
+    team: 'Team',
+    registeredTeams: 'Registered Teams',
+    houseTeams: 'House teams',
+    teamsPerHouseHelp: 'Use 2 when each house sends two teams for the same event.',
     noStudentAutoHelp: 'All houses will be registered automatically. Results entry will score houses only.',
     categories: 'Categories',
     saveBulkEvents: 'Save Bulk Events',
@@ -546,6 +557,11 @@ const TEXT = {
     parentKind: '家长',
     teacherKind: '教师',
     withoutStudentDetails: '不使用学生资料',
+    teamsPerHouse: '每组队伍数',
+    team: '队',
+    registeredTeams: '已报名队伍',
+    houseTeams: '运动组队伍',
+    teamsPerHouseHelp: '如果每个运动组派两队参加同一个项目，请选择 2。',
     noStudentAutoHelp: '所有运动组将自动报名。成绩录入只为运动组计分。',
     categories: '组别',
     saveBulkEvents: '保存批量项目',
@@ -637,9 +653,19 @@ const displayStudentName = (student, fallback = '') => {
   return names.length ? names.join(' / ') : fallback;
 };
 const isHouseEntry = (registration) => registration?.entryType === 'house';
-const displayEntryName = (registration, student = {}) =>
-  isHouseEntry(registration) ? normalizeHouse(registration.house || student.house || registration.studentIc) : displayStudentName(student, registration.studentIc);
-const getHouseEntryKey = (house) => `house-${hashString(house)}`;
+const getTeamCountPerHouse = (event) => Math.max(1, Math.min(8, Number(event?.teamCountPerHouse || 1) || 1));
+const clampTeamCountPerHouse = (value) => Math.max(1, Math.min(8, Number(value || 1) || 1));
+const getHouseEntryTeamNumber = (registration) => Math.max(1, Number(registration?.teamNumber || 1) || 1);
+const displayEntryName = (registration, student = {}, event = null, teamLabel = 'Team') => {
+  if (!isHouseEntry(registration)) return displayStudentName(student, registration.studentIc);
+  const house = normalizeHouse(registration.house || student.house || registration.studentIc);
+  const teamNumber = getHouseEntryTeamNumber(registration);
+  return getTeamCountPerHouse(event) > 1 ? `${house} ${teamLabel} ${teamNumber}` : house;
+};
+const getHouseEntryKey = (house, teamNumber = 1) => {
+  const baseKey = `house-${hashString(house)}`;
+  return Number(teamNumber) > 1 ? `${baseKey}-team-${teamNumber}` : baseKey;
+};
 const normalizeGender = (value) => {
   const text = String(value || '').trim();
   const key = text.toLocaleUpperCase('ms-MY');
@@ -965,7 +991,7 @@ function App() {
     const studentB = studentMap.get(b.studentIc) || {};
     const classCompare = String(studentA.className || a.className || '').localeCompare(String(studentB.className || b.className || ''), undefined, { numeric: true });
     if (classCompare) return classCompare;
-    return displayEntryName(a, studentA).localeCompare(displayEntryName(b, studentB));
+    return displayEntryName(a, studentA, slipEvent, t('team')).localeCompare(displayEntryName(b, studentB, slipEvent, t('team')));
   });
   const registeredStudentSet = new Set(registrationsForRegisterEvent.map((item) => item.studentIc));
   const studentClassOptions = useMemo(() => (
@@ -1143,7 +1169,7 @@ function App() {
       if (houseCompare) return houseCompare;
       const classCompare = String(a.student.className || a.registration.className || '').localeCompare(String(b.student.className || b.registration.className || ''), undefined, { numeric: true });
       if (classCompare) return classCompare;
-      return displayEntryName(a.registration, a.student).localeCompare(displayEntryName(b.registration, b.student));
+      return displayEntryName(a.registration, a.student, slipEvent, t('team')).localeCompare(displayEntryName(b.registration, b.student, slipEvent, t('team')));
     })
     .map((row, index) => ({ ...row, participantNo: index + 1 }));
 
@@ -1209,6 +1235,7 @@ function App() {
     const timestamp = Date.now();
     const scoring = getScoring();
     const withoutStudent = Boolean(eventForm.withoutStudent);
+    const teamCountPerHouse = withoutStudent ? clampTeamCountPerHouse(eventForm.teamCountPerHouse) : 1;
     sortedCategories.forEach((category, index) => {
       const eventName = buildEventName(baseName, category);
       const id = `${timestamp}-${index}-${slugify(eventName)}`;
@@ -1220,24 +1247,28 @@ function App() {
         type: eventForm.type,
         kind: eventForm.kind,
         withoutStudent,
+        teamCountPerHouse,
         scoring,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
       if (withoutStudent) {
         houses.forEach((house) => {
-          const entryKey = getHouseEntryKey(house);
-          batch.set(doc(refs.registrations, `${id}_${entryKey}`), {
-            eventId: id,
-            entryType: 'house',
-            studentIc: entryKey,
-            house,
-            className: '',
-            position: '',
-            points: 0,
-            updatedAt: serverTimestamp(),
-            updatedMs: Date.now(),
-          }, { merge: true });
+          Array.from({ length: teamCountPerHouse }, (_, teamIndex) => teamIndex + 1).forEach((teamNumber) => {
+            const entryKey = getHouseEntryKey(house, teamNumber);
+            batch.set(doc(refs.registrations, `${id}_${entryKey}`), {
+              eventId: id,
+              entryType: 'house',
+              studentIc: entryKey,
+              house,
+              teamNumber,
+              className: '',
+              position: '',
+              points: 0,
+              updatedAt: serverTimestamp(),
+              updatedMs: Date.now(),
+            }, { merge: true });
+          });
         });
       }
     });
@@ -1247,7 +1278,7 @@ function App() {
     setResultEventId(`${timestamp}-0-${slugify(buildEventName(baseName, sortedCategories[0]))}`);
     setSlipEventId(`${timestamp}-0-${slugify(buildEventName(baseName, sortedCategories[0]))}`);
     setEventForm((current) => ({ ...DEFAULT_EVENT_FORM, startNo: Number(current.startNo || 1) + sortedCategories.length }));
-    setNotice(withoutStudent ? `${sortedCategories.length} house events created with all houses registered.` : `${sortedCategories.length} events created.`);
+    setNotice(withoutStudent ? `${sortedCategories.length} house events created with ${teamCountPerHouse} team(s) per house.` : `${sortedCategories.length} events created.`);
   };
 
   const downloadTemplate = async () => {
@@ -1420,6 +1451,7 @@ function App() {
       type: event.type || 'Individu',
       kind: event.kind || 'Utama',
       withoutStudent: Boolean(event.withoutStudent),
+      teamCountPerHouse: getTeamCountPerHouse(event),
       points1: Number(event.scoring?.[1] || 0),
       points2: Number(event.scoring?.[2] || 0),
       points3: Number(event.scoring?.[3] || 0),
@@ -1446,6 +1478,7 @@ function App() {
       type: eventEditForm.type,
       kind: eventEditForm.kind,
       withoutStudent: Boolean(eventEditForm.withoutStudent),
+      teamCountPerHouse: eventEditForm.withoutStudent ? clampTeamCountPerHouse(eventEditForm.teamCountPerHouse) : 1,
       scoring: {
         ...Object.fromEntries(
           RESULT_PLACES.map((position) => [position, Number(eventEditForm[`points${position}`] || 0)]),
@@ -1467,21 +1500,31 @@ function App() {
           batch.delete(doc(refs.registrations, registration.id));
         });
       }
-      const existingHouseEntries = new Set(eventRegistrationRows.filter(isHouseEntry).map((registration) => registration.studentIc));
+      const expectedHouseEntryKeys = new Set();
+      const existingHouseEntries = new Map(eventRegistrationRows.filter(isHouseEntry).map((registration) => [registration.studentIc, registration]));
       houses.forEach((house) => {
-        const entryKey = getHouseEntryKey(house);
-        if (event.withoutStudent && existingHouseEntries.has(entryKey)) return;
-        batch.set(doc(refs.registrations, `${event.id}_${entryKey}`), {
-          eventId: event.id,
-          entryType: 'house',
-          studentIc: entryKey,
-          house,
-          className: '',
-          position: '',
-          points: 0,
-          updatedAt: serverTimestamp(),
-          updatedMs: Date.now(),
-        }, { merge: true });
+        Array.from({ length: payload.teamCountPerHouse }, (_, teamIndex) => teamIndex + 1).forEach((teamNumber) => {
+          const entryKey = getHouseEntryKey(house, teamNumber);
+          expectedHouseEntryKeys.add(entryKey);
+          const existingEntry = existingHouseEntries.get(entryKey);
+          batch.set(doc(refs.registrations, `${event.id}_${entryKey}`), {
+            eventId: event.id,
+            entryType: 'house',
+            studentIc: entryKey,
+            house,
+            teamNumber,
+            className: '',
+            position: existingEntry?.position || '',
+            points: Number(existingEntry?.points || 0),
+            updatedAt: serverTimestamp(),
+            updatedMs: existingEntry?.updatedMs || Date.now(),
+          }, { merge: true });
+        });
+      });
+      eventRegistrationRows.filter(isHouseEntry).forEach((registration) => {
+        if (!expectedHouseEntryKeys.has(registration.studentIc)) {
+          batch.delete(doc(refs.registrations, registration.id));
+        }
       });
     } else if (event.withoutStudent) {
       eventRegistrationRows.filter(isHouseEntry).forEach((registration) => {
@@ -1640,6 +1683,7 @@ function App() {
   };
 
   const getJuryRowsForEvent = (eventId) => {
+    const event = eventMap.get(eventId);
     const eventRows = [...(eventRegistrations.get(eventId) || [])].sort((a, b) => {
       const positionA = Number(a.position || 99);
       const positionB = Number(b.position || 99);
@@ -1650,7 +1694,7 @@ function App() {
       if (houseCompare) return houseCompare;
       const classCompare = String(studentA.className || a.className || '').localeCompare(String(studentB.className || b.className || ''), undefined, { numeric: true });
       if (classCompare) return classCompare;
-      return displayEntryName(a, studentA).localeCompare(displayEntryName(b, studentB));
+      return displayEntryName(a, studentA, event, t('team')).localeCompare(displayEntryName(b, studentB, event, t('team')));
     });
     return eventRows.map((registration, index) => ({
       registration,
@@ -1664,7 +1708,7 @@ function App() {
       .map(({ registration, student, participantNo }) => `
         <tr>
           <td>${escapeHtml(participantNo)}</td>
-          <td>${escapeHtml(displayEntryName(registration, student))}</td>
+          <td>${escapeHtml(displayEntryName(registration, student, event, t('team')))}</td>
           <td>${escapeHtml(student.className || registration.className || '')}</td>
           <td>${escapeHtml(registration.house || student.house || '')}</td>
           <td>${escapeHtml(isResultPlace(registration.position) ? resultPlaceLabel(registration.position) : '')}</td>
@@ -2033,7 +2077,7 @@ function App() {
                               <div className="result-detail-row" key={result.id}>
                                 <b>{resultPlaceLabel(result.position)}</b>
                                 <span>
-                                  <strong>{displayEntryName(result, result.student)}</strong>
+                                  <strong>{displayEntryName(result, result.student, group.event, t('team'))}</strong>
                                   {!isHouseEntry(result) && <small>{`${result.student?.className || result.className || '-'} - ${result.house || result.student?.house || '-'}`}</small>}
                                 </span>
                                 <em>{result.points || 0}</em>
@@ -2220,7 +2264,21 @@ function App() {
                 <input type="checkbox" checked={eventForm.withoutStudent} onChange={(event) => setEventForm({ ...eventForm, withoutStudent: event.target.checked })} />
                 <span>{t('withoutStudentDetails')}</span>
               </label>
-              {eventForm.withoutStudent && <p className="help-text">{t('noStudentAutoHelp')}</p>}
+              {eventForm.withoutStudent && (
+                <>
+                  <label>
+                    {t('teamsPerHouse')}
+                    <input
+                      type="number"
+                      min="1"
+                      max="8"
+                      value={eventForm.teamCountPerHouse}
+                      onChange={(event) => setEventForm({ ...eventForm, teamCountPerHouse: clampTeamCountPerHouse(event.target.value) })}
+                    />
+                  </label>
+                  <p className="help-text">{t('noStudentAutoHelp')} {t('teamsPerHouseHelp')}</p>
+                </>
+              )}
               <div className="category-picker">
                 <div className="category-actions">
                   <span>{t('categories')}</span>
@@ -2280,11 +2338,23 @@ function App() {
                         </td>
                         <td>
                           {editing ? (
-                            <label className="table-check">
-                              <input type="checkbox" checked={eventEditForm.withoutStudent} onChange={(inputEvent) => setEventEditForm({ ...eventEditForm, withoutStudent: inputEvent.target.checked })} />
-                              {t('house')}
-                            </label>
-                          ) : (event.withoutStudent ? t('houseOnly') : t('student'))}
+                            <div className="mini-points">
+                              <label className="table-check">
+                                <input type="checkbox" checked={eventEditForm.withoutStudent} onChange={(inputEvent) => setEventEditForm({ ...eventEditForm, withoutStudent: inputEvent.target.checked })} />
+                                {t('house')}
+                              </label>
+                              {eventEditForm.withoutStudent && (
+                                <input
+                                  aria-label={t('teamsPerHouse')}
+                                  type="number"
+                                  min="1"
+                                  max="8"
+                                  value={eventEditForm.teamCountPerHouse}
+                                  onChange={(inputEvent) => setEventEditForm({ ...eventEditForm, teamCountPerHouse: clampTeamCountPerHouse(inputEvent.target.value) })}
+                                />
+                              )}
+                            </div>
+                          ) : (event.withoutStudent ? `${t('houseOnly')} (${getTeamCountPerHouse(event)} ${t('teamsPerHouse')})` : t('student'))}
                         </td>
                         <td>
                           {editing ? (
@@ -2381,7 +2451,7 @@ function App() {
               )}
               <div className="stats-box">
                 <span>{t('registered')}: <b>{registrationsForRegisterEvent.length}</b></span>
-                <span>{registerEvent?.withoutStudent ? t('houseEvent') : t('availableStudents')}: <b>{registerEvent?.withoutStudent ? registrationsForRegisterEvent.length : registerCandidates.length}</b></span>
+                <span>{registerEvent?.withoutStudent ? t('houseTeams') : t('availableStudents')}: <b>{registerEvent?.withoutStudent ? registrationsForRegisterEvent.length : registerCandidates.length}</b></span>
               </div>
               <button
                 className="secondary-button"
@@ -2401,7 +2471,7 @@ function App() {
               <div className="entry-columns">
                 <div>
                   <div className="list-title">
-                    <p className="eyebrow">{registerEvent?.withoutStudent ? t('houseEvent') : t('studentPool')}</p>
+                    <p className="eyebrow">{registerEvent?.withoutStudent ? t('houseTeams') : t('studentPool')}</p>
                     <strong>{registerCandidates.length}</strong>
                   </div>
                   <div className="student-picker">
@@ -2422,7 +2492,7 @@ function App() {
                 </div>
                 <div>
                   <div className="list-title">
-                    <p className="eyebrow">{registerEvent?.withoutStudent ? t('registeredHouses') : t('registeredStudents')}</p>
+                    <p className="eyebrow">{registerEvent?.withoutStudent ? t('registeredTeams') : t('registeredStudents')}</p>
                     <strong>{registrationsForRegisterEvent.length}</strong>
                   </div>
                   <div className="registered-list">
@@ -2432,7 +2502,7 @@ function App() {
                         <div className="registered-row" key={registration.id}>
                           <div className="registered-top">
                             <div>
-                              <strong>{displayEntryName(registration, student)}</strong>
+                              <strong>{displayEntryName(registration, student, registerEvent, t('team'))}</strong>
                               {!isHouseEntry(registration) && <small>{`${student.className || registration.className} - ${tGender(student.gender)} - ${registration.house}`}</small>}
                             </div>
                             {!registerEvent?.withoutStudent && <button className="position clear" type="button" onClick={() => toggleRegistration({ ...student, ic: registration.studentIc })}>{t('remove')}</button>}
@@ -2495,7 +2565,7 @@ function App() {
                         {group.results.map((result) => (
                           <div className="result-detail-grid" key={result.id}>
                             <b>{resultPlaceLabel(result.position)}</b>
-                            <strong>{displayEntryName(result, result.student)}</strong>
+                            <strong>{displayEntryName(result, result.student, group.event, t('team'))}</strong>
                             <span>{result.student?.className || result.className || '-'}</span>
                             <span>{result.house || result.student?.house || '-'}</span>
                             <em>{result.points || 0}</em>
@@ -2543,7 +2613,7 @@ function App() {
                   <div className="registered-row" key={registration.id}>
                     <div className="registered-top">
                       <div>
-                        <strong>{displayEntryName(registration, student)}</strong>
+                        <strong>{displayEntryName(registration, student, resultEvent, t('team'))}</strong>
                         {!isHouseEntry(registration) && <small>{`${student.className || registration.className} - ${tGender(student.gender)} - ${registration.house}`}</small>}
                       </div>
                       <b>{registration.points || 0}</b>
@@ -2619,7 +2689,7 @@ function App() {
                         return (
                           <tr key={registration.id}>
                             <td>{participantNo}</td>
-                            <td>{displayEntryName(registration, student)}</td>
+                            <td>{displayEntryName(registration, student, slipEvent, t('team'))}</td>
                             <td>{student.className || registration.className}</td>
                             <td>{registration.house || student.house}</td>
                             <td>{isResultPlace(registration.position) ? resultPlaceLabel(registration.position) : ''}</td>
