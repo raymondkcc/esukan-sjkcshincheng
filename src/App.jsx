@@ -44,6 +44,49 @@ const CATEGORY_ORDER = [
   'Tahap 2 (Terbuka)',
   'Terbuka L', 'Terbuka P', 'Ibu Bapa', 'Guru',
 ];
+const ZH_YEAR_CATEGORY_LABELS = {
+  1: '一年级',
+  2: '二年级',
+  3: '三年级',
+  4: '四年级',
+  5: '五年级',
+  6: '六年级',
+};
+const CATEGORY_TRANSLATIONS = {
+  ms: {
+    L: 'Lelaki',
+    P: 'Perempuan',
+    TERBUKA: 'Terbuka',
+    CAMPURAN: 'Campuran',
+    'TAHAP 1': 'Tahap 1',
+    'TAHAP DUA': 'Tahap 2',
+    'TAHAP 2': 'Tahap 2',
+    'IBU BAPA': 'Ibu Bapa',
+    GURU: 'Guru',
+  },
+  en: {
+    L: 'Male',
+    P: 'Female',
+    TERBUKA: 'Open',
+    CAMPURAN: 'Mixed',
+    'TAHAP 1': 'Level 1',
+    'TAHAP DUA': 'Level 2',
+    'TAHAP 2': 'Level 2',
+    'IBU BAPA': 'Parents',
+    GURU: 'Teachers',
+  },
+  zh: {
+    L: '男',
+    P: '女',
+    TERBUKA: '公开',
+    CAMPURAN: '混合',
+    'TAHAP 1': '第一阶段',
+    'TAHAP DUA': '第二阶段',
+    'TAHAP 2': '第二阶段',
+    'IBU BAPA': '家长',
+    GURU: '教师',
+  },
+};
 const DEFAULT_SETTINGS = {
   schoolName: 'SJKC Shin Cheng',
   eventTitle: 'Sistem e-Sukan',
@@ -753,7 +796,61 @@ function App() {
     if (key === 'GURU') return t('teacherKind');
     return value || '-';
   };
-  const tYear = (year) => (language === 'zh' ? `${year}年级` : language === 'en' ? `Year ${year}` : `Tahun ${year}`);
+  const tYear = (year) => (language === 'zh' ? (ZH_YEAR_CATEGORY_LABELS[Number(year)] || `${year}年级`) : language === 'en' ? `Year ${year}` : `Tahun ${year}`);
+  const tCategory = (category) => {
+    const text = String(category || '').trim();
+    if (!text) return '-';
+    const translations = CATEGORY_TRANSLATIONS[language] || CATEGORY_TRANSLATIONS.ms;
+    const yearGenderMatch = text.match(/^([LP])([1-6])$/i);
+    if (yearGenderMatch) {
+      const genderKey = yearGenderMatch[1].toUpperCase();
+      const year = Number(yearGenderMatch[2]);
+      if (language === 'zh') return `${ZH_YEAR_CATEGORY_LABELS[year] || `${year}年级`}（${translations[genderKey]}）`;
+      const yearLabel = language === 'en' ? `Year ${year}` : `Tahun ${year}`;
+      return `${yearLabel} (${translations[genderKey]})`;
+    }
+    const yearMatch = text.match(/^Tahun\s*([1-6])$/i);
+    if (yearMatch) return tYear(Number(yearMatch[1]));
+    const tahapMatch = text.match(/^(Tahap 1|Tahap Dua|Tahap 2)\s*\((L|P|Terbuka|Campuran)\)$/i);
+    if (tahapMatch) {
+      const tahapKey = tahapMatch[1].toLocaleUpperCase('ms-MY');
+      const groupKey = tahapMatch[2].toLocaleUpperCase('ms-MY');
+      return language === 'zh'
+        ? `${translations[tahapKey] || tahapMatch[1]}（${translations[groupKey] || tahapMatch[2]}）`
+        : `${translations[tahapKey] || tahapMatch[1]} (${translations[groupKey] || tahapMatch[2]})`;
+    }
+    const openMatch = text.match(/^Terbuka\s+([LP])$/i);
+    if (openMatch) {
+      const genderKey = openMatch[1].toUpperCase();
+      return language === 'zh'
+        ? `${translations.TERBUKA}（${translations[genderKey]}）`
+        : `${translations.TERBUKA} (${translations[genderKey]})`;
+    }
+    const upper = text.toLocaleUpperCase('ms-MY');
+    if (translations[upper]) return translations[upper];
+    return text;
+  };
+  const tEventDisplayName = (event) => {
+    if (!event) return t('event');
+    const name = String(event.name || event.baseName || '').trim();
+    const baseName = String(event.baseName || '').trim();
+    const category = String(event.category || '').trim();
+    const categoryLabel = category ? tCategory(category) : '';
+    if (baseName && categoryLabel) return `${baseName} ${categoryLabel}`;
+    if (!name) return categoryLabel || t('event');
+    if (!categoryLabel) return name;
+    const escapedCategory = category.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const compactName = name
+      .replace(new RegExp(`\\s*\\(${escapedCategory}\\)\\s*$`, 'i'), '')
+      .replace(/\s+TAHUN\s*[1-6]\s*\([LP]\)\s*$/i, '')
+      .replace(/\s+\(TAHUN\s*[1-6]\)\s*$/i, '')
+      .replace(/\s+\((?:Tahap 1|Tahap Dua|Tahap 2|Terbuka\s+[LP]|Ibu Bapa|Guru)[^)]+\)\s*$/i, '')
+      .trim();
+    if (!compactName) return categoryLabel;
+    if (compactName.toLocaleUpperCase('ms-MY').includes(category.toLocaleUpperCase('ms-MY'))) return name;
+    return `${compactName} ${categoryLabel}`;
+  };
+  const tEventLabel = (event) => event ? `${event.no || '-'} - ${tEventDisplayName(event)}` : '';
   const runScoreTransition = (callback) => {
     if (typeof document === 'undefined' || typeof document.startViewTransition !== 'function' || document.visibilityState !== 'visible') {
       callback();
@@ -960,9 +1057,9 @@ function App() {
       .sort((a, b) => {
         const noCompare = Number(a.event.no || 0) - Number(b.event.no || 0);
         if (noCompare) return noCompare;
-        return eventDisplayName(a.event).localeCompare(eventDisplayName(b.event), undefined, { numeric: true });
+        return tEventDisplayName(a.event).localeCompare(tEventDisplayName(b.event), undefined, { numeric: true });
       })
-  ), [viewResults]);
+  ), [language, viewResults]);
   const buildResultGroups = (results, sortMode = 'event') => {
     const grouped = new Map();
     results.forEach((result) => {
@@ -981,12 +1078,12 @@ function App() {
         if (sortMode === 'latest') return b.latestMs - a.latestMs;
         const noCompare = Number(a.event?.no || 0) - Number(b.event?.no || 0);
         if (noCompare) return noCompare;
-        return eventDisplayName(a.event).localeCompare(eventDisplayName(b.event), undefined, { numeric: true });
+        return tEventDisplayName(a.event).localeCompare(tEventDisplayName(b.event), undefined, { numeric: true });
       });
   };
   const latestResultGroups = useMemo(() => {
     return buildResultGroups(viewResults, 'latest').slice(0, 12);
-  }, [viewResults]);
+  }, [language, viewResults]);
   const latestLiveResultId = latestResultGroups[0]?.id || '';
   const latestLiveResultStamp = latestResultGroups[0]?.latestMs || 0;
   const latestWinnerRows = latestResultGroups.slice(0, 3).map((group) => ({
@@ -1001,7 +1098,7 @@ function App() {
   const filteredViewResults = useMemo(() => (
     viewResultEventFilter ? viewResults.filter((result) => result.eventId === viewResultEventFilter) : viewResults
   ), [viewResultEventFilter, viewResults]);
-  const viewResultGroups = useMemo(() => buildResultGroups(filteredViewResults), [filteredViewResults]);
+  const viewResultGroups = useMemo(() => buildResultGroups(filteredViewResults), [filteredViewResults, language]);
   const athleteLeaders = useMemo(() => {
     const athletes = new Map();
     registrations.forEach((registration) => {
@@ -1580,8 +1677,8 @@ function App() {
         <div class="header">
           <h1>${escapeHtml(settings.schoolName)}</h1>
           <h2>${escapeHtml(`${settings.eventTitle} ${settings.year}`)}</h2>
-          <h3>${escapeHtml(eventPrintTitle(event))}</h3>
-          <p>${escapeHtml([event.no ? `No. ${event.no}` : '', event.category || ''].filter(Boolean).join(' - '))}</p>
+          <h3>${escapeHtml(tEventDisplayName(event))}</h3>
+          <p>${escapeHtml([event.no ? `No. ${event.no}` : '', event.category ? tCategory(event.category) : ''].filter(Boolean).join(' - '))}</p>
         </div>
         <table>
           <thead><tr><th>${escapeHtml(t('participantNo'))}</th><th>${escapeHtml(t('name'))}</th><th>${escapeHtml(t('class'))}</th><th>${escapeHtml(t('house'))}</th><th>${escapeHtml(`${t('place')} / ${t('position')}`)}</th><th>${escapeHtml(t('record'))}</th></tr></thead>
@@ -1611,7 +1708,7 @@ function App() {
     printWindow.document.write(`
       <html>
         <head>
-          <title>${escapeHtml(t('resultSlip'))} - ${escapeHtml(printEvents.length === 1 ? eventPrintTitle(printEvents[0]) : `${printEvents.length} ${t('resultEvents')}`)}</title>
+          <title>${escapeHtml(t('resultSlip'))} - ${escapeHtml(printEvents.length === 1 ? tEventDisplayName(printEvents[0]) : `${printEvents.length} ${t('resultEvents')}`)}</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 24px; color: #111827; }
             .header { text-align: center; border-bottom: 2px solid #111827; padding-bottom: 12px; margin-bottom: 18px; }
@@ -1845,7 +1942,7 @@ function App() {
                 </div>
                 {latestWinnerRows.length ? latestWinnerRows.map((row, rowIndex) => (
                   <div className="winner-row" key={row.id}>
-                    <strong>{rowIndex + 1}. {eventDisplayName(row.event)}</strong>
+                    <strong>{rowIndex + 1}. {tEventDisplayName(row.event)}</strong>
                     {row.winners.map((house, index) => (
                       <span key={`${row.id}-${index}`} className="winner-cell">
                         {house ? <b className={`${houseClassName(house)} winner-chip`}>{house}</b> : <em>-</em>}
@@ -1925,7 +2022,7 @@ function App() {
                       >
                         <button className="result-summary" type="button" onClick={() => toggleResultGroup(group.id, 'live')} aria-expanded={expanded}>
                           <span>
-                            <strong>{eventDisplayName(group.event)}</strong>
+                            <strong>{tEventDisplayName(group.event)}</strong>
                             <small>{group.results.length} {t('completedResults').toLowerCase()}</small>
                           </span>
                           <ChevronDown className={expanded ? 'chevron open' : 'chevron'} size={18} />
@@ -2132,7 +2229,7 @@ function App() {
                 <div className="category-grid">
                   {CATEGORY_ORDER.map((category) => (
                     <button key={category} type="button" className={eventForm.categories.includes(category) ? 'chip active' : 'chip'} onClick={() => toggleCategory(category)}>
-                      {category}
+                      {tCategory(category)}
                     </button>
                   ))}
                 </div>
@@ -2171,7 +2268,7 @@ function App() {
                         <td>
                           {editing
                             ? <input list="category-list" value={eventEditForm.category} onChange={(inputEvent) => setEventEditForm({ ...eventEditForm, category: inputEvent.target.value })} />
-                            : event.category}
+                            : tCategory(event.category)}
                         </td>
                         <td>
                           {editing ? (
@@ -2226,7 +2323,7 @@ function App() {
                 </tbody>
               </table>
               <datalist id="category-list">
-                {CATEGORY_ORDER.map((category) => <option key={category} value={category} />)}
+                {CATEGORY_ORDER.map((category) => <option key={category} value={category} label={tCategory(category)}>{tCategory(category)}</option>)}
               </datalist>
             </div>
           </section>
@@ -2246,7 +2343,7 @@ function App() {
                 {t('event')}
                 <select value={registerEventId} onChange={(event) => setRegisterEventId(event.target.value)}>
                   <option value="">{t('chooseEvent')}</option>
-                  {events.map((event) => <option key={event.id} value={event.id}>{eventLabel(event)}</option>)}
+                  {events.map((event) => <option key={event.id} value={event.id}>{tEventLabel(event)}</option>)}
                 </select>
               </label>
               {registerEvent?.withoutStudent && (
@@ -2364,7 +2461,7 @@ function App() {
                 {t('quickEvent')}
                 <select value={viewResultEventFilter} onChange={(event) => setViewResultEventFilter(event.target.value)}>
                   <option value="">{t('allEvents')}</option>
-                  {resultEventOptions.map(({ id, event }) => <option key={id} value={id}>{eventDisplayName(event)}</option>)}
+                  {resultEventOptions.map(({ id, event }) => <option key={id} value={id}>{tEventDisplayName(event)}</option>)}
                 </select>
               </label>
               <div className="stats-box">
@@ -2381,7 +2478,7 @@ function App() {
                   <div className="result-group" key={group.id}>
                     <button className="result-summary" type="button" onClick={() => toggleResultGroup(group.id, 'view')} aria-expanded={expanded}>
                       <span>
-                        <strong>{eventDisplayName(group.event)}</strong>
+                        <strong>{tEventDisplayName(group.event)}</strong>
                         <small>{group.results.length} {t('completedResults').toLowerCase()}</small>
                       </span>
                       <ChevronDown className={expanded ? 'chevron open' : 'chevron'} size={18} />
@@ -2427,7 +2524,7 @@ function App() {
                 {t('event')}
                 <select value={resultEventId} onChange={(event) => setResultEventId(event.target.value)}>
                   <option value="">{t('chooseEvent')}</option>
-                  {events.map((event) => <option key={event.id} value={event.id}>{eventLabel(event)}</option>)}
+                  {events.map((event) => <option key={event.id} value={event.id}>{tEventLabel(event)}</option>)}
                 </select>
               </label>
               {resultEvent && (
@@ -2480,7 +2577,7 @@ function App() {
                 {t('event')}
                 <select value={slipEventId} onChange={(event) => setSlipEventId(event.target.value)}>
                   <option value="">{t('chooseEvent')}</option>
-                  {events.map((event) => <option key={event.id} value={event.id}>{eventLabel(event)}</option>)}
+                  {events.map((event) => <option key={event.id} value={event.id}>{tEventLabel(event)}</option>)}
                 </select>
               </label>
               <div className="stats-box">
@@ -2501,7 +2598,7 @@ function App() {
                   {events.map((event) => (
                     <label className="bulk-slip-row" key={event.id}>
                       <input type="checkbox" checked={selectedSlipEventIds.includes(event.id)} onChange={() => toggleSlipSelection(event.id)} />
-                      <span>{eventDisplayName(event)}</span>
+                      <span>{tEventDisplayName(event)}</span>
                     </label>
                   ))}
                 </div>
@@ -2512,8 +2609,8 @@ function App() {
               <div className="slip-paper">
                 <p className="eyebrow">{settings.schoolName}</p>
                 <h2>{settings.eventTitle} {settings.year}</h2>
-                <h3>{slipEvent ? eventPrintTitle(slipEvent) : t('chooseEvent')}</h3>
-                {slipEvent && <p className="slip-meta">{[slipEvent.no ? `No. ${slipEvent.no}` : '', slipEvent.category || ''].filter(Boolean).join(' - ')}</p>}
+                <h3>{slipEvent ? tEventDisplayName(slipEvent) : t('chooseEvent')}</h3>
+                {slipEvent && <p className="slip-meta">{[slipEvent.no ? `No. ${slipEvent.no}` : '', slipEvent.category ? tCategory(slipEvent.category) : ''].filter(Boolean).join(' - ')}</p>}
                 <table>
                   <thead><tr><th>{t('participantNo')}</th><th>{t('name')}</th><th>{t('class')}</th><th>{t('house')}</th><th>{t('place')} / {t('position')}</th><th>{t('record')}</th></tr></thead>
                   <tbody>
