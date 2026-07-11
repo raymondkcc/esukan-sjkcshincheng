@@ -691,6 +691,7 @@ function App() {
   const [viewResultEventFilter, setViewResultEventFilter] = useState('');
   const [expandedLiveResultIds, setExpandedLiveResultIds] = useState({});
   const [expandedViewResultIds, setExpandedViewResultIds] = useState({});
+  const [rollingLiveResultId, setRollingLiveResultId] = useState('');
   const [editingEventId, setEditingEventId] = useState('');
   const [eventEditForm, setEventEditForm] = useState(null);
 
@@ -974,6 +975,8 @@ function App() {
     });
     return buildResultGroups(viewResults.filter((result) => latestEventIds.includes(result.eventId)), 'latest');
   }, [latestResults, viewResults]);
+  const latestLiveResultId = latestResultGroups[0]?.id || '';
+  const latestLiveResultStamp = latestResultGroups[0]?.latestMs || 0;
   const filteredViewResults = useMemo(() => (
     viewResultEventFilter ? viewResults.filter((result) => result.eventId === viewResultEventFilter) : viewResults
   ), [viewResultEventFilter, viewResults]);
@@ -1025,6 +1028,21 @@ function App() {
       return displayEntryName(a.registration, a.student).localeCompare(displayEntryName(b.registration, b.student));
     })
     .map((row, index) => ({ ...row, participantNo: index + 1 }));
+
+  useEffect(() => {
+    if (!latestLiveResultId) {
+      setExpandedLiveResultIds({});
+      setRollingLiveResultId('');
+      return undefined;
+    }
+
+    setExpandedLiveResultIds({ [latestLiveResultId]: true });
+    setRollingLiveResultId(latestLiveResultId);
+    const timer = window.setTimeout(() => {
+      setRollingLiveResultId((current) => (current === latestLiveResultId ? '' : current));
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [latestLiveResultId, latestLiveResultStamp]);
 
   const getScoring = () => ({
     1: Number(eventForm.points1 || 0),
@@ -1847,7 +1865,11 @@ function App() {
                   {latestResultGroups.length ? latestResultGroups.map((group) => {
                     const expanded = Boolean(expandedLiveResultIds[group.id]);
                     return (
-                      <div className="result-group" key={group.id}>
+                      <div
+                        className={rollingLiveResultId === group.id ? 'result-group rolling-new' : 'result-group'}
+                        key={group.id}
+                        style={{ viewTransitionName: `live-result-${hashString(group.id)}` }}
+                      >
                         <button className="result-summary" type="button" onClick={() => toggleResultGroup(group.id, 'live')} aria-expanded={expanded}>
                           <span>
                             <strong>{eventDisplayName(group.event)}</strong>
