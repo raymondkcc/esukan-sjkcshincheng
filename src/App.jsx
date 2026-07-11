@@ -912,17 +912,6 @@ function App() {
     };
   }, [houses, registrations, studentMap]);
 
-  const latestResults = useMemo(() => {
-    return registrations
-      .filter((registration) => Number(registration.position || 0) > 0)
-      .map((registration) => ({
-        ...registration,
-        student: studentMap.get(registration.studentIc),
-        event: eventMap.get(registration.eventId),
-      }))
-      .sort((a, b) => Number(b.updatedMs || 0) - Number(a.updatedMs || 0))
-      .slice(0, 12);
-  }, [eventMap, registrations, studentMap]);
   const viewResults = useMemo(() => {
     return registrations
       .filter((registration) => Number(registration.position || 0) > 0)
@@ -969,14 +958,19 @@ function App() {
       });
   };
   const latestResultGroups = useMemo(() => {
-    const latestEventIds = [];
-    latestResults.forEach((result) => {
-      if (result.eventId && !latestEventIds.includes(result.eventId)) latestEventIds.push(result.eventId);
-    });
-    return buildResultGroups(viewResults.filter((result) => latestEventIds.includes(result.eventId)), 'latest');
-  }, [latestResults, viewResults]);
+    return buildResultGroups(viewResults, 'latest').slice(0, 12);
+  }, [viewResults]);
   const latestLiveResultId = latestResultGroups[0]?.id || '';
   const latestLiveResultStamp = latestResultGroups[0]?.latestMs || 0;
+  const latestWinnerRows = latestResultGroups.slice(0, 3).map((group) => ({
+    id: group.id,
+    event: group.event,
+    winners: [1, 2, 3, 4, 5].map((position) => {
+      const result = group.results.find((item) => Number(item.position || 0) === position);
+      if (!result) return null;
+      return normalizeHouse(result.house || result.student?.house || '');
+    }),
+  }));
   const filteredViewResults = useMemo(() => (
     viewResultEventFilter ? viewResults.filter((result) => result.eventId === viewResultEventFilter) : viewResults
   ), [viewResultEventFilter, viewResults]);
@@ -1774,8 +1768,8 @@ function App() {
 
       <main className="workspace">
         {activeTab === 'live' && (
-          <section className={settings.liveBoardMode === 'total-only' ? 'live-grid total-only' : 'live-grid'}>
-            <div className="panel scoreboard-panel live-board-surface" ref={liveBoardRef}>
+          <section className={settings.liveBoardMode === 'total-only' ? 'live-grid total-only' : 'live-grid'} ref={liveBoardRef}>
+            <div className="panel scoreboard-panel live-board-surface">
               <div className="section-head">
                 <div className="live-board-title">
                   <img className="live-board-logo" src={SCHOOL_LOGO_PATH} alt={`${liveBoardHeaderSchool} logo`} />
@@ -1802,6 +1796,34 @@ function App() {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+
+            <div className="panel fullscreen-winners-panel">
+              <div className="section-head">
+                <div>
+                  <p className="eyebrow">{t('latest')}</p>
+                  <h2>{t('results')}</h2>
+                </div>
+                <FileSpreadsheet size={22} />
+              </div>
+              <div className="winner-table">
+                <div className="winner-row winner-head">
+                  <span>{t('event')}</span>
+                  {[1, 2, 3, 4, 5].map((position) => <span key={position}>{position}</span>)}
+                </div>
+                {latestWinnerRows.length ? latestWinnerRows.map((row, rowIndex) => (
+                  <div className="winner-row" key={row.id}>
+                    <strong>{rowIndex + 1}. {eventDisplayName(row.event)}</strong>
+                    {row.winners.map((house, index) => (
+                      <span key={`${row.id}-${index}`} className="winner-cell">
+                        {house ? <b className={`${houseClassName(house)} winner-chip`}>{house}</b> : <em>-</em>}
+                      </span>
+                    ))}
+                  </div>
+                )) : (
+                  <div className="winner-row winner-empty">{t('noResults')}</div>
+                )}
               </div>
             </div>
 
