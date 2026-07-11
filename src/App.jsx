@@ -20,6 +20,7 @@ import {
   Languages,
   Maximize2,
   Medal,
+  Minimize2,
   Monitor,
   Moon,
   Printer,
@@ -115,6 +116,7 @@ const TEXT = {
     toggleTheme: 'Tukar tema',
     changeLanguage: 'Tukar bahasa',
     fullscreen: 'Skrin penuh',
+    exitFullscreen: 'Keluar skrin penuh',
     latest: 'Terkini',
     results: 'Keputusan',
     classMarks: 'Markah Kelas',
@@ -264,6 +266,7 @@ const TEXT = {
     toggleTheme: 'Toggle theme',
     changeLanguage: 'Change language',
     fullscreen: 'Fullscreen',
+    exitFullscreen: 'Exit fullscreen',
     latest: 'Latest',
     results: 'Results',
     classMarks: 'Class Marks',
@@ -413,6 +416,7 @@ const TEXT = {
     toggleTheme: '切换主题',
     changeLanguage: '切换语言',
     fullscreen: '全屏',
+    exitFullscreen: '退出全屏',
     latest: '最新',
     results: '成绩',
     classMarks: '班级分数',
@@ -675,6 +679,7 @@ function App() {
   const [accessError, setAccessError] = useState('');
   const [theme, setTheme] = useState(() => localStorage.getItem('esukan-theme') || 'light');
   const [language, setLanguage] = useState(() => localStorage.getItem('esukan-language') || 'ms');
+  const [isLiveBoardFullscreen, setIsLiveBoardFullscreen] = useState(false);
   const [loadedSections, setLoadedSections] = useState({ settings: false, students: false, events: false, registrations: false });
   const [uploadingStudents, setUploadingStudents] = useState(false);
   const [notice, setNotice] = useState('');
@@ -769,6 +774,15 @@ function App() {
   useEffect(() => {
     if (!visibleTabs.includes(activeTab)) setActiveTab('live');
   }, [activeTab, visibleTabs]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsLiveBoardFullscreen(document.fullscreenElement === liveBoardRef.current);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    handleFullscreenChange();
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
   useEffect(() => {
     setEventForm((current) => {
@@ -1504,11 +1518,14 @@ function App() {
     setNotice('Event deleted.');
   };
 
-  const openFullscreen = async () => {
-    if (!liveBoardRef.current) return;
-    if (!document.fullscreenElement) {
-      await liveBoardRef.current.requestFullscreen();
+  const toggleFullscreen = async () => {
+    const board = liveBoardRef.current;
+    if (!board) return;
+    if (document.fullscreenElement === board) {
+      await document.exitFullscreen();
+      return;
     }
+    await board.requestFullscreen();
   };
 
   const cycleLanguage = () => {
@@ -1783,8 +1800,14 @@ function App() {
                     <h2>{liveBoardHeaderTitle}</h2>
                   </div>
                 </div>
-                <button className="icon-button" type="button" onClick={openFullscreen} title={t('fullscreen')} aria-label={t('fullscreen')}>
-                  <Maximize2 size={18} />
+                <button
+                  className="icon-button"
+                  type="button"
+                  onClick={toggleFullscreen}
+                  title={isLiveBoardFullscreen ? t('exitFullscreen') : t('fullscreen')}
+                  aria-label={isLiveBoardFullscreen ? t('exitFullscreen') : t('fullscreen')}
+                >
+                  {isLiveBoardFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                 </button>
               </div>
               <div className="score-list">
