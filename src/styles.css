@@ -520,7 +520,7 @@ button {
   height: 100vh;
   display: grid;
   grid-template-columns: 1fr;
-  grid-template-rows: minmax(0, 1fr) minmax(112px, 28vh);
+  grid-template-rows: minmax(0, 0.52fr) minmax(260px, 0.48fr);
   gap: clamp(6px, 1vh, 14px);
   padding: clamp(8px, 1.4vh, 20px);
   overflow: hidden;
@@ -552,7 +552,7 @@ button {
 }
 
 .live-grid:fullscreen .section-head h2 {
-  font-size: clamp(1rem, 2.1vw, 2.45rem);
+  font-size: clamp(0.96rem, 1.85vw, 2.18rem);
   text-align: center;
   line-height: 1.1;
 }
@@ -579,7 +579,7 @@ button {
 
 .live-grid:fullscreen .eyebrow {
   margin-bottom: clamp(2px, 0.45vh, 6px);
-  font-size: clamp(1rem, 2.8vw, 3.2rem);
+  font-size: clamp(0.9rem, 2.4vw, 2.8rem);
   letter-spacing: 0.12em;
 }
 
@@ -595,7 +595,7 @@ button {
   min-height: 0;
   display: grid;
   grid-auto-rows: minmax(0, 1fr);
-  gap: clamp(4px, 0.75vh, 10px);
+  gap: clamp(3px, 0.65vh, 8px);
 }
 
 .live-grid:fullscreen .score-track {
@@ -603,16 +603,16 @@ button {
 }
 
 .live-grid:fullscreen .score-number {
-  font-size: clamp(1.15rem, 3.4vw, 4.3rem);
+  font-size: clamp(0.98rem, 2.55vw, 3.35rem);
 }
 
 .live-grid:fullscreen .score-row {
   min-height: 0;
-  grid-template-columns: clamp(76px, 11vw, 190px) minmax(0, 1fr) clamp(46px, 8vw, 132px);
+  grid-template-columns: clamp(70px, 9vw, 156px) minmax(0, 1fr) clamp(42px, 6.8vw, 112px);
 }
 
 .live-grid:fullscreen .rank {
-  font-size: clamp(0.62rem, 1.45vw, 1.45rem);
+  font-size: clamp(0.58rem, 1.3vw, 1.3rem);
   line-height: 1.05;
   text-align: right;
 }
@@ -620,7 +620,7 @@ button {
 .live-grid:fullscreen .house {
   padding-inline: clamp(8px, 1.6vw, 24px);
   overflow: hidden;
-  font-size: clamp(0.8rem, 1.85vw, 2.1rem);
+  font-size: clamp(0.72rem, 1.65vw, 1.9rem);
   text-overflow: ellipsis;
 }
 
@@ -649,7 +649,7 @@ button {
 
 .winner-row {
   display: grid;
-  grid-template-columns: minmax(120px, 1.4fr) repeat(4, minmax(0, 1fr));
+  grid-template-columns: minmax(180px, 1.4fr) repeat(4, minmax(90px, 1fr));
   align-items: center;
   gap: clamp(6px, 1vw, 12px);
   min-height: 0;
@@ -671,12 +671,23 @@ button {
   text-transform: uppercase;
 }
 
+.winner-head span:first-child {
+  font-size: clamp(1.04rem, 1.6vw, 1.62rem);
+}
+
+.winner-head span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .winner-row strong {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: clamp(0.72rem, 1vw, 1rem);
+  font-size: clamp(0.9rem, 1.18vw, 1.22rem);
 }
 
 .winner-cell {
@@ -705,6 +716,21 @@ button {
   padding: 4px 8px;
   overflow: hidden;
   font-size: clamp(0.54rem, 0.95vw, 0.88rem);
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.live-grid:fullscreen .winner-chip.house {
+  width: 100%;
+  height: auto;
+  min-height: clamp(24px, 4vh, 46px);
+  justify-content: center;
+  border-radius: 6px;
+  padding: clamp(3px, 0.7vh, 6px) clamp(4px, 0.8vw, 8px);
+  overflow: hidden;
+  font-size: clamp(0.72rem, 1.18vw, 1.28rem);
+  line-height: 1.05;
   letter-spacing: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1523,7 +1549,7 @@ td .house {
 
 @media (max-height: 720px) {
   .live-grid:fullscreen {
-    grid-template-rows: minmax(0, 1fr) minmax(92px, 24vh);
+    grid-template-rows: minmax(0, 0.54fr) minmax(220px, 0.46fr);
     gap: 6px;
     padding-block: 8px;
   }
@@ -1546,8 +1572,9 @@ td .house {
     padding-block: 4px;
   }
 
-  .winner-chip.house {
+  .live-grid:fullscreen .winner-chip.house {
     min-height: 20px;
+    font-size: clamp(0.62rem, 1vw, 1rem);
   }
 }
 
@@ -1627,14 +1654,14 @@ td .house {
   }
 
   .winner-row {
-    grid-template-columns: minmax(88px, 1.2fr) repeat(4, minmax(44px, 1fr));
+    grid-template-columns: minmax(96px, 1.2fr) repeat(4, minmax(46px, 1fr));
     gap: 5px;
     padding-inline: 6px;
   }
 
-  .winner-chip.house {
+  .live-grid:fullscreen .winner-chip.house {
     padding-inline: 4px;
-    font-size: 0.52rem;
+    font-size: 0.58rem;
   }
 
   .inline-fields,
