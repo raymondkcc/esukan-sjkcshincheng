@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { initializeApp } from 'firebase/app';
 import {
   collection,
+  deleteField,
   deleteDoc,
   doc,
   getFirestore,
@@ -67,7 +68,13 @@ const DEFAULT_EVENT_FORM = {
   points2: 7,
   points3: 5,
   points4: 3,
-  points5: 0,
+};
+const RESULT_PLACES = [1, 2, 3, 4];
+const RESULT_PLACE_LABELS = {
+  1: '🏆 Champion',
+  2: '🥈 2nd',
+  3: '🥉 3rd',
+  4: '🎖️ 4th',
 };
 const TEACHER_PASSWORD = 'BBC8419';
 const ADMIN_PASSWORD = 'BBC8419adm';
@@ -596,6 +603,8 @@ const getYear = (className) => {
   const match = String(className || '').match(/[1-6]/);
   return match ? Number(match[0]) : 0;
 };
+const isResultPlace = (position) => RESULT_PLACES.includes(Number(position || 0));
+const resultPlaceLabel = (position) => RESULT_PLACE_LABELS[Number(position || 0)] || String(position || '');
 const getEventEligibility = (event) => {
   const category = String(event?.category || '').trim().toLocaleUpperCase('ms-MY');
   const match = category.match(/^([LP])([1-6])$/);
@@ -894,6 +903,7 @@ function App() {
     const classTotals = new Map();
 
     registrations.forEach((registration) => {
+      if (!isResultPlace(registration.position)) return;
       const student = studentMap.get(registration.studentIc) || {};
       const house = normalizeHouse(registration.house || student.house);
       const points = Number(registration.points || 0);
@@ -914,7 +924,7 @@ function App() {
 
   const viewResults = useMemo(() => {
     return registrations
-      .filter((registration) => Number(registration.position || 0) > 0)
+      .filter((registration) => isResultPlace(registration.position))
       .map((registration) => ({
         ...registration,
         student: studentMap.get(registration.studentIc),
@@ -965,7 +975,7 @@ function App() {
   const latestWinnerRows = latestResultGroups.slice(0, 3).map((group) => ({
     id: group.id,
     event: group.event,
-    winners: [1, 2, 3, 4, 5].map((position) => {
+    winners: RESULT_PLACES.map((position) => {
       const result = group.results.find((item) => Number(item.position || 0) === position);
       if (!result) return null;
       return normalizeHouse(result.house || result.student?.house || '');
@@ -1038,13 +1048,9 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [latestLiveResultId, latestLiveResultStamp]);
 
-  const getScoring = () => ({
-    1: Number(eventForm.points1 || 0),
-    2: Number(eventForm.points2 || 0),
-    3: Number(eventForm.points3 || 0),
-    4: Number(eventForm.points4 || 0),
-    5: Number(eventForm.points5 || 0),
-  });
+  const getScoring = () => Object.fromEntries(
+    RESULT_PLACES.map((position) => [position, Number(eventForm[`points${position}`] || 0)]),
+  );
 
   const saveSettings = async () => {
     if (accessRole === 'user') {
@@ -1304,7 +1310,6 @@ function App() {
       points2: Number(event.scoring?.[2] || 0),
       points3: Number(event.scoring?.[3] || 0),
       points4: Number(event.scoring?.[4] || 0),
-      points5: Number(event.scoring?.[5] || 0),
     });
   };
 
@@ -1328,11 +1333,10 @@ function App() {
       kind: eventEditForm.kind,
       withoutStudent: Boolean(eventEditForm.withoutStudent),
       scoring: {
-        1: Number(eventEditForm.points1 || 0),
-        2: Number(eventEditForm.points2 || 0),
-        3: Number(eventEditForm.points3 || 0),
-        4: Number(eventEditForm.points4 || 0),
-        5: Number(eventEditForm.points5 || 0),
+        ...Object.fromEntries(
+          RESULT_PLACES.map((position) => [position, Number(eventEditForm[`points${position}`] || 0)]),
+        ),
+        5: deleteField(),
       },
       updatedAt: serverTimestamp(),
     };
@@ -1472,9 +1476,10 @@ function App() {
       return;
     }
     const event = eventMap.get(registration.eventId);
-    const points = event && position ? Number(event.scoring?.[position] || 0) : 0;
+    const nextPosition = isResultPlace(position) ? position : '';
+    const points = event && nextPosition ? Number(event.scoring?.[nextPosition] || 0) : 0;
     await setDoc(doc(refs.registrations, registration.id), {
-      position,
+      position: nextPosition,
       points,
       updatedAt: serverTimestamp(),
       updatedMs: Date.now(),
@@ -1545,7 +1550,7 @@ function App() {
           <td>${escapeHtml(displayEntryName(registration, student))}</td>
           <td>${escapeHtml(student.className || registration.className || '')}</td>
           <td>${escapeHtml(registration.house || student.house || '')}</td>
-          <td>${escapeHtml(registration.position || '')}</td>
+          <td>${escapeHtml(isResultPlace(registration.position) ? resultPlaceLabel(registration.position) : '')}</td>
           <td></td>
         </tr>
       `).join('');
@@ -1788,7 +1793,7 @@ function App() {
                   const width = house.total > 0 ? Math.max((house.total / maxScore) * 100, 8) : 0;
                   return (
                     <div className="score-row" key={house.name} style={{ viewTransitionName: `score-row-${hashString(house.name)}` }}>
-                      <div className="rank">{index + 1}</div>
+                      <div className="rank">{resultPlaceLabel(index + 1) || index + 1}</div>
                       <div className="score-track">
                         <div className={houseClassName(house.name)} style={{ width: `${width}%` }}>{house.name}</div>
                       </div>
@@ -1810,7 +1815,7 @@ function App() {
               <div className="winner-table">
                 <div className="winner-row winner-head">
                   <span>{t('event')}</span>
-                  {[1, 2, 3, 4, 5].map((position) => <span key={position}>{position}</span>)}
+                  {RESULT_PLACES.map((position) => <span key={position}>{resultPlaceLabel(position)}</span>)}
                 </div>
                 {latestWinnerRows.length ? latestWinnerRows.map((row, rowIndex) => (
                   <div className="winner-row" key={row.id}>
@@ -1903,7 +1908,7 @@ function App() {
                           <div className="result-details">
                             {group.results.map((result) => (
                               <div className="result-detail-row" key={result.id}>
-                                <b>{result.position}</b>
+                                <b>{resultPlaceLabel(result.position)}</b>
                                 <span>
                                   <strong>{displayEntryName(result, result.student)}</strong>
                                   {!isHouseEntry(result) && <small>{`${result.student?.className || result.className || '-'} - ${result.house || result.student?.house || '-'}`}</small>}
@@ -2107,9 +2112,9 @@ function App() {
                 </div>
               </div>
               <div className="points-grid">
-                {[1, 2, 3, 4, 5].map((position) => (
+                {RESULT_PLACES.map((position) => (
                   <label key={position}>
-                    P{position}
+                    {resultPlaceLabel(position)}
                     <input type="number" value={eventForm[`points${position}`]} onChange={(event) => setEventForm({ ...eventForm, [`points${position}`]: event.target.value })} />
                   </label>
                 ))}
@@ -2161,7 +2166,7 @@ function App() {
                         <td>
                           {editing ? (
                             <div className="mini-points">
-                              {[1, 2, 3, 4, 5].map((position) => (
+                              {RESULT_PLACES.map((position) => (
                                 <input
                                   key={position}
                                   aria-label={`${t('position')} ${position} ${t('points')}`}
@@ -2171,7 +2176,7 @@ function App() {
                                 />
                               ))}
                             </div>
-                          ) : [1, 2, 3, 4, 5].map((position) => event.scoring?.[position] ?? 0).join('/')}
+                          ) : RESULT_PLACES.map((position) => event.scoring?.[position] ?? 0).join('/')}
                         </td>
                         <td>{(eventRegistrations.get(event.id) || []).length}</td>
                         <td>
@@ -2366,7 +2371,7 @@ function App() {
                         </div>
                         {group.results.map((result) => (
                           <div className="result-detail-grid" key={result.id}>
-                            <b>{result.position}</b>
+                            <b>{resultPlaceLabel(result.position)}</b>
                             <strong>{displayEntryName(result, result.student)}</strong>
                             <span>{result.student?.className || result.className || '-'}</span>
                             <span>{result.house || result.student?.house || '-'}</span>
@@ -2401,8 +2406,8 @@ function App() {
               </label>
               {resultEvent && (
                 <div className="points-preview">
-                  {[1, 2, 3, 4, 5].map((position) => (
-                    <span key={position}>P{position}: <b>{resultEvent.scoring?.[position] || 0}</b></span>
+                  {RESULT_PLACES.map((position) => (
+                    <span key={position}>{resultPlaceLabel(position)}: <b>{resultEvent.scoring?.[position] || 0}</b></span>
                   ))}
                 </div>
               )}
@@ -2421,9 +2426,9 @@ function App() {
                       <b>{registration.points || 0}</b>
                     </div>
                     <div className="position-buttons">
-                      {['1', '2', '3', '4', '5'].map((position) => (
+                      {RESULT_PLACES.map((position) => String(position)).map((position) => (
                         <button key={position} className={String(registration.position) === position ? 'position active' : 'position'} type="button" onClick={() => updateResult(registration, position)}>
-                          {position}
+                          {resultPlaceLabel(position)}
                         </button>
                       ))}
                       <button className="position clear" type="button" onClick={() => updateResult(registration, '')}>{t('clear')}</button>
@@ -2454,7 +2459,7 @@ function App() {
               </label>
               <div className="stats-box">
                 <span>{t('registered')}: <b>{registrationsForSlipEvent.length}</b></span>
-                <span>{t('completedResults')}: <b>{registrationsForSlipEvent.filter((registration) => Number(registration.position || 0) > 0).length}</b></span>
+                <span>{t('completedResults')}: <b>{registrationsForSlipEvent.filter((registration) => isResultPlace(registration.position)).length}</b></span>
               </div>
               <button className="primary-button" type="button" onClick={printResultSlip}><Printer size={16} /> {t('generateSlip')}</button>
               <div className="bulk-slip-box">
@@ -2494,7 +2499,7 @@ function App() {
                             <td>{displayEntryName(registration, student)}</td>
                             <td>{student.className || registration.className}</td>
                             <td>{registration.house || student.house}</td>
-                            <td>{registration.position || ''}</td>
+                            <td>{isResultPlace(registration.position) ? resultPlaceLabel(registration.position) : ''}</td>
                             <td></td>
                           </tr>
                         );
