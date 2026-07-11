@@ -557,7 +557,7 @@ const TEXT = {
     parentKind: '家长',
     teacherKind: '教师',
     withoutStudentDetails: '不使用学生资料',
-    teamsPerHouse: '每组队伍数',
+    teamsPerHouse: '每组队伍数（最多8）',
     team: '队',
     registeredTeams: '已报名队伍',
     houseTeams: '运动组队伍',
