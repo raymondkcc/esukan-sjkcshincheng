@@ -34,7 +34,13 @@ import {
   Users,
 } from 'lucide-react';
 
-const DEFAULT_HOUSES = ['红B组', '黄A组', '红A组', '青B组', '蓝A组', '黄B组', '蓝B组', '青A组'];
+const DEFAULT_HOUSES = ['红A组', '红B组', '黄A组', '黄B组', '蓝A组', '蓝B组', '青A组', '青B组'];
+const HOUSE_COLOR_ORDER = [
+  ['红', 'MERAH', 'RED'],
+  ['黄', 'KUNING', 'YELLOW'],
+  ['蓝', 'BIRU', 'BLUE'],
+  ['青', '绿', 'HIJAU', 'GREEN'],
+];
 const CATEGORY_ORDER = [
   'L1', 'P1', 'L2', 'P2', 'L3', 'P3',
   'L4', 'P4', 'L5', 'P5', 'L6', 'P6',
@@ -247,7 +253,7 @@ const TEXT = {
     parentKind: 'Ibu Bapa',
     teacherKind: 'Guru',
     withoutStudentDetails: 'Tanpa butiran murid',
-    teamsPerHouse: 'Pasukan setiap rumah',
+    teamsPerHouse: 'Pasukan setiap rumah (maksimum 8)',
     team: 'Pasukan',
     registeredTeams: 'Pasukan berdaftar',
     houseTeams: 'Pasukan rumah',
@@ -402,7 +408,7 @@ const TEXT = {
     parentKind: 'Parents',
     teacherKind: 'Teacher',
     withoutStudentDetails: 'Without student details',
-    teamsPerHouse: 'Teams per house',
+    teamsPerHouse: 'Teams per house (max 8)',
     team: 'Team',
     registeredTeams: 'Registered Teams',
     houseTeams: 'House teams',
@@ -631,10 +637,25 @@ const db = firebaseApp ? getFirestore(firebaseApp) : null;
 
 const normalizeHouse = (value) => String(value || '').trim();
 const houseMatchKey = (value) => normalizeHouse(value).toLocaleUpperCase('ms-MY');
-const splitHouseList = (value) => String(value || '')
-  .split(/[,，;；\n\r]+/)
-  .map(normalizeHouse)
-  .filter(Boolean);
+const getHouseColorOrder = (house) => {
+  const key = houseMatchKey(house);
+  const index = HOUSE_COLOR_ORDER.findIndex((tokens) => tokens.some((token) => key.includes(token)));
+  return index >= 0 ? index : HOUSE_COLOR_ORDER.length;
+};
+const compareHouses = (a, b) => {
+  const colorCompare = getHouseColorOrder(a) - getHouseColorOrder(b);
+  if (colorCompare) return colorCompare;
+  return normalizeHouse(a).localeCompare(normalizeHouse(b), undefined, { numeric: true });
+};
+const sortHouseList = (items) => {
+  const unique = new Map();
+  items.map(normalizeHouse).filter(Boolean).forEach((house) => {
+    const key = houseMatchKey(house);
+    if (!unique.has(key)) unique.set(key, house);
+  });
+  return Array.from(unique.values()).sort(compareHouses);
+};
+const splitHouseList = (value) => sortHouseList(String(value || '').split(/[,，;；\n\r]+/));
 const sortByName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''));
 const hashString = (value) => {
   let hash = 0;
@@ -793,7 +814,7 @@ function App() {
 
   const houses = useMemo(() => {
     const source = Array.isArray(settings.houses) ? settings.houses : DEFAULT_HOUSES;
-    return source.map(normalizeHouse).filter(Boolean);
+    return sortHouseList(source);
   }, [settings.houses]);
   const liveBoardHeaderSchool = String(settings.liveBoardHeaderSchool || settings.schoolName || DEFAULT_SETTINGS.schoolName).trim();
   const liveBoardHeaderTitle = String(settings.liveBoardHeaderTitle || DEFAULT_SETTINGS.liveBoardHeaderTitle).trim();
@@ -989,6 +1010,8 @@ function App() {
     if (positionA !== positionB) return positionA - positionB;
     const studentA = studentMap.get(a.studentIc) || {};
     const studentB = studentMap.get(b.studentIc) || {};
+    const houseCompare = compareHouses(a.house || studentA.house, b.house || studentB.house);
+    if (houseCompare) return houseCompare;
     const classCompare = String(studentA.className || a.className || '').localeCompare(String(studentB.className || b.className || ''), undefined, { numeric: true });
     if (classCompare) return classCompare;
     return displayEntryName(a, studentA, slipEvent, t('team')).localeCompare(displayEntryName(b, studentB, slipEvent, t('team')));
@@ -1004,7 +1027,7 @@ function App() {
   ), [students]);
   const studentHouseOptions = useMemo(() => (
     Array.from(new Set(students.map((student) => normalizeHouse(student.house)).filter(Boolean)))
-      .sort((a, b) => a.localeCompare(b))
+      .sort(compareHouses)
   ), [students]);
 
   const filteredStudents = students.filter((student) => {
@@ -1055,7 +1078,7 @@ function App() {
     });
 
     return {
-      houses: houseTotals.sort((a, b) => b.total - a.total),
+      houses: houseTotals.sort((a, b) => b.total - a.total || compareHouses(a.name, b.name)),
       classes: Array.from(classTotals.entries())
         .map(([name, total]) => ({ name, total }))
         .sort((a, b) => b.total - a.total),
@@ -1165,7 +1188,7 @@ function App() {
       student: studentMap.get(registration.studentIc) || {},
     }))
     .sort((a, b) => {
-      const houseCompare = houseMatchKey(a.registration.house || a.student.house).localeCompare(houseMatchKey(b.registration.house || b.student.house));
+      const houseCompare = compareHouses(a.registration.house || a.student.house, b.registration.house || b.student.house);
       if (houseCompare) return houseCompare;
       const classCompare = String(a.student.className || a.registration.className || '').localeCompare(String(b.student.className || b.registration.className || ''), undefined, { numeric: true });
       if (classCompare) return classCompare;
@@ -1356,7 +1379,7 @@ function App() {
         }, { merge: true }));
       });
       if (importedHouses.length) {
-        queueWrite((activeBatch) => activeBatch.set(refs.settings, { houses: importedHouses, updatedAt: serverTimestamp() }, { merge: true }));
+        queueWrite((activeBatch) => activeBatch.set(refs.settings, { houses: sortHouseList(importedHouses), updatedAt: serverTimestamp() }, { merge: true }));
       }
       if (writeCount > 0) batches.push(batch);
       await Promise.all(batches.map((queuedBatch) => queuedBatch.commit()));
@@ -1690,7 +1713,7 @@ function App() {
       if (positionA !== positionB) return positionA - positionB;
       const studentA = studentMap.get(a.studentIc) || {};
       const studentB = studentMap.get(b.studentIc) || {};
-      const houseCompare = houseMatchKey(a.house || studentA.house).localeCompare(houseMatchKey(b.house || studentB.house));
+      const houseCompare = compareHouses(a.house || studentA.house, b.house || studentB.house);
       if (houseCompare) return houseCompare;
       const classCompare = String(studentA.className || a.className || '').localeCompare(String(studentB.className || b.className || ''), undefined, { numeric: true });
       if (classCompare) return classCompare;
