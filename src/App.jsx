@@ -34,7 +34,7 @@ import {
   Users,
 } from 'lucide-react';
 
-const DEFAULT_HOUSES = ['红A组', '红B组', '黄A组', '黄B组', '蓝A组', '蓝B组', '青A组', '青B组'];
+const DEFAULT_HOUSES = ['红', '黄', '蓝', '青'];
 const HOUSE_COLOR_ORDER = [
   ['红', 'MERAH', 'RED'],
   ['黄', 'KUNING', 'YELLOW'],
@@ -133,15 +133,15 @@ const ADMIN_PASSWORD = 'BBC8419adm';
 const ACCESS_LEVELS = {
   user: {
     label: 'Live View',
-    tabs: ['live', 'viewResults'],
+    tabs: ['live', 'viewResults', 'lanes'],
   },
   teacher: {
     label: 'Teacher',
-    tabs: ['live', 'viewResults', 'students', 'events', 'register', 'slips', 'settings'],
+    tabs: ['live', 'viewResults', 'lanes', 'students', 'events', 'register', 'slips', 'settings'],
   },
   admin: {
     label: 'Admin',
-    tabs: ['live', 'viewResults', 'students', 'events', 'register', 'results', 'slips', 'settings'],
+    tabs: ['live', 'viewResults', 'lanes', 'students', 'events', 'register', 'results', 'slips', 'settings'],
   },
 };
 const LANGUAGE_OPTIONS = [
@@ -153,6 +153,8 @@ const TEXT = {
   ms: {
     liveBoard: 'Papan Markah',
     viewResults: 'Lihat Keputusan',
+    lanes: 'Lorong',
+    laneViewer: 'Paparan Lorong',
     students: 'Murid',
     events: 'Acara',
     register: 'Daftar',
@@ -173,6 +175,7 @@ const TEXT = {
     classMarks: 'Markah Kelas',
     optional: 'Pilihan',
     noResults: 'Belum ada keputusan.',
+    noLanes: 'Belum ada susunan lorong.',
     readonly: 'Baca sahaja',
     completed: 'Siap',
     resultEvents: 'Acara',
@@ -181,6 +184,7 @@ const TEXT = {
     allEvents: 'Semua acara',
     quickEvent: 'Cari cepat acara',
     place: 'Tempat',
+    lane: 'Lorong',
     name: 'Nama',
     class: 'Kelas',
     house: 'Rumah',
@@ -308,6 +312,8 @@ const TEXT = {
   en: {
     liveBoard: 'Live Board',
     viewResults: 'View Results',
+    lanes: 'Lanes',
+    laneViewer: 'Lane Viewer',
     students: 'Students',
     events: 'Events',
     register: 'Register',
@@ -328,6 +334,7 @@ const TEXT = {
     classMarks: 'Class Marks',
     optional: 'Optional',
     noResults: 'No results entered yet.',
+    noLanes: 'No lane assignments yet.',
     readonly: 'Readonly',
     completed: 'Completed',
     resultEvents: 'Events',
@@ -336,6 +343,7 @@ const TEXT = {
     allEvents: 'All events',
     quickEvent: 'Quick event search',
     place: 'Place',
+    lane: 'Lane',
     name: 'Name',
     class: 'Class',
     house: 'House',
@@ -463,6 +471,8 @@ const TEXT = {
   zh: {
     liveBoard: '即时积分榜',
     viewResults: '查看成绩',
+    lanes: '跑道',
+    laneViewer: '跑道查看',
     students: '学生',
     events: '项目',
     register: '报名',
@@ -483,6 +493,7 @@ const TEXT = {
     classMarks: '班级分数',
     optional: '选项',
     noResults: '还没有录入成绩。',
+    noLanes: '还没有跑道安排。',
     readonly: '只读',
     completed: '已完成',
     resultEvents: '项目',
@@ -491,6 +502,7 @@ const TEXT = {
     allEvents: '全部项目',
     quickEvent: '快速选择项目',
     place: '名次',
+    lane: '跑道',
     name: '姓名',
     class: '班级',
     house: '运动组',
@@ -674,14 +686,29 @@ const displayStudentName = (student, fallback = '') => {
   return names.length ? names.join(' / ') : fallback;
 };
 const isHouseEntry = (registration) => registration?.entryType === 'house';
+const isRelayEntry = (registration) => registration?.entryType === 'relay';
 const getTeamCountPerHouse = (event) => Math.max(1, Math.min(8, Number(event?.teamCountPerHouse || 1) || 1));
 const clampTeamCountPerHouse = (value) => Math.max(1, Math.min(8, Number(value || 1) || 1));
 const getHouseEntryTeamNumber = (registration) => Math.max(1, Number(registration?.teamNumber || 1) || 1);
 const displayEntryName = (registration, student = {}, event = null, teamLabel = 'Team') => {
+  if (isRelayEntry(registration)) {
+    const members = Array.isArray(registration.teamMembers) ? registration.teamMembers : [];
+    const names = members.map((member) => String(member.name || '').trim()).filter(Boolean);
+    return names.length ? names.join(' / ') : normalizeHouse(registration.house || student.house || registration.studentIc);
+  }
   if (!isHouseEntry(registration)) return displayStudentName(student, registration.studentIc);
   const house = normalizeHouse(registration.house || student.house || registration.studentIc);
   const teamNumber = getHouseEntryTeamNumber(registration);
   return getTeamCountPerHouse(event) > 1 ? `${house} ${teamLabel} ${teamNumber}` : house;
+};
+const displayEntryClass = (registration, student = {}) => {
+  if (isRelayEntry(registration)) {
+    const classes = (Array.isArray(registration.teamMembers) ? registration.teamMembers : [])
+      .map((member) => String(member.className || '').trim())
+      .filter(Boolean);
+    return Array.from(new Set(classes)).join(' / ') || registration.className || '-';
+  }
+  return student.className || registration.className || '-';
 };
 const getHouseEntryKey = (house, teamNumber = 1) => {
   const baseKey = `house-${hashString(house)}`;
@@ -796,6 +823,7 @@ function App() {
   const [slipEventId, setSlipEventId] = useState('');
   const [selectedSlipEventIds, setSelectedSlipEventIds] = useState([]);
   const [viewResultEventFilter, setViewResultEventFilter] = useState('');
+  const [laneEventFilter, setLaneEventFilter] = useState('');
   const [expandedLiveResultIds, setExpandedLiveResultIds] = useState({});
   const [expandedViewResultIds, setExpandedViewResultIds] = useState({});
   const [rollingLiveResultId, setRollingLiveResultId] = useState('');
@@ -1148,6 +1176,41 @@ function App() {
     viewResultEventFilter ? viewResults.filter((result) => result.eventId === viewResultEventFilter) : viewResults
   ), [viewResultEventFilter, viewResults]);
   const viewResultGroups = useMemo(() => buildResultGroups(filteredViewResults), [filteredViewResults, language]);
+  const laneEventOptions = useMemo(() => (
+    events
+      .filter((event) => (Array.isArray(event.lanePlan) && event.lanePlan.length) || (eventRegistrations.get(event.id) || []).some((registration) => Number(registration.laneNumber || 0) > 0))
+      .sort((a, b) => Number(a.no || 0) - Number(b.no || 0) || tEventDisplayName(a).localeCompare(tEventDisplayName(b), undefined, { numeric: true }))
+  ), [eventRegistrations, events, language]);
+  const laneGroups = useMemo(() => (
+    laneEventOptions
+      .filter((event) => !laneEventFilter || event.id === laneEventFilter)
+      .map((event) => {
+        const laneRegistrations = [...(eventRegistrations.get(event.id) || [])]
+          .filter((registration) => Number(registration.laneNumber || 0) > 0);
+        const registrationsByLane = new Map(laneRegistrations.map((registration) => [Number(registration.laneNumber), registration]));
+        const planRows = Array.isArray(event.lanePlan) && event.lanePlan.length
+          ? event.lanePlan
+          : laneRegistrations.map((registration) => ({ laneNumber: Number(registration.laneNumber), house: registration.house }));
+        return {
+          id: event.id,
+          event,
+          rows: planRows
+            .map((lane) => {
+              const laneNumber = Number(lane.laneNumber || lane.lane || 0);
+              const registration = registrationsByLane.get(laneNumber);
+              return {
+                id: registration?.id || `${event.id}-lane-${laneNumber}`,
+                laneNumber,
+                house: registration?.house || lane.house || '',
+                registration,
+              };
+            })
+            .filter((row) => row.laneNumber)
+            .sort((a, b) => a.laneNumber - b.laneNumber || compareHouses(a.house, b.house)),
+        };
+      })
+      .filter((group) => group.rows.length)
+  ), [eventRegistrations, laneEventFilter, laneEventOptions]);
   const athleteLeaders = useMemo(() => {
     const athletes = new Map();
     registrations.forEach((registration) => {
@@ -1732,7 +1795,7 @@ function App() {
         <tr>
           <td>${escapeHtml(participantNo)}</td>
           <td>${escapeHtml(displayEntryName(registration, student, event, t('team')))}</td>
-          <td>${escapeHtml(student.className || registration.className || '')}</td>
+          <td>${escapeHtml(displayEntryClass(registration, student))}</td>
           <td>${escapeHtml(registration.house || student.house || '')}</td>
           <td>${escapeHtml(isResultPlace(registration.position) ? resultPlaceLabel(registration.position) : '')}</td>
           <td></td>
@@ -1880,6 +1943,7 @@ function App() {
   const allTabs = [
     ['live', Monitor, t('liveBoard')],
     ['viewResults', FileSpreadsheet, t('viewResults')],
+    ['lanes', Activity, t('lanes')],
     ['students', Users, t('students')],
     ['events', Trophy, t('events')],
     ['register', ClipboardList, t('register')],
@@ -2101,7 +2165,7 @@ function App() {
                                 <b>{resultPlaceLabel(result.position)}</b>
                                 <span>
                                   <strong>{displayEntryName(result, result.student, group.event, t('team'))}</strong>
-                                  {!isHouseEntry(result) && <small>{`${result.student?.className || result.className || '-'} - ${result.house || result.student?.house || '-'}`}</small>}
+                                  {!isHouseEntry(result) && <small>{`${displayEntryClass(result, result.student)} - ${result.house || result.student?.house || '-'}`}</small>}
                                 </span>
                                 <em>{result.points || 0}</em>
                               </div>
@@ -2528,7 +2592,7 @@ function App() {
                           <div className="registered-top">
                             <div>
                               <strong>{displayEntryName(registration, student, registerEvent, t('team'))}</strong>
-                              {!isHouseEntry(registration) && <small>{`${student.className || registration.className} - ${tGender(student.gender)} - ${registration.house}`}</small>}
+                              {!isHouseEntry(registration) && <small>{`${displayEntryClass(registration, student)} - ${tGender(student.gender)} - ${registration.house}`}</small>}
                             </div>
                             {!registerEvent?.withoutStudent && <button className="position clear" type="button" onClick={() => toggleRegistration({ ...student, ic: registration.studentIc })}>{t('remove')}</button>}
                           </div>
@@ -2591,7 +2655,7 @@ function App() {
                           <div className="result-detail-grid" key={result.id}>
                             <b>{resultPlaceLabel(result.position)}</b>
                             <strong>{displayEntryName(result, result.student, group.event, t('team'))}</strong>
-                            <span>{result.student?.className || result.className || '-'}</span>
+                            <span>{displayEntryClass(result, result.student)}</span>
                             <span>{result.house || result.student?.house || '-'}</span>
                             <em>{result.points || 0}</em>
                           </div>
@@ -2601,6 +2665,64 @@ function App() {
                   </div>
                 );
               }) : <p className="empty">{t('noResults')}</p>}
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'lanes' && visibleTabs.includes('lanes') && (
+          <section className="split-grid">
+            <div className="panel control-panel">
+              <div className="section-head">
+                <div>
+                  <p className="eyebrow">{t('official')}</p>
+                  <h2>{t('laneViewer')}</h2>
+                </div>
+                <Activity size={22} />
+              </div>
+              <label>
+                {t('quickEvent')}
+                <select value={laneEventFilter} onChange={(event) => setLaneEventFilter(event.target.value)}>
+                  <option value="">{t('allEvents')}</option>
+                  {laneEventOptions.map((event) => <option key={event.id} value={event.id}>{tEventDisplayName(event)}</option>)}
+                </select>
+              </label>
+              <div className="stats-box">
+                <span>{t('resultEvents')}: <b>{laneEventOptions.length}</b></span>
+                <span>{t('entries')}: <b>{laneGroups.reduce((total, group) => total + group.rows.length, 0)}</b></span>
+              </div>
+            </div>
+
+            <div className="panel result-browser">
+              {laneGroups.length ? laneGroups.map((group) => (
+                <div className="result-group" key={group.id}>
+                  <button className="result-summary" type="button" aria-expanded="true">
+                    <span>
+                      <strong>{tEventDisplayName(group.event)}</strong>
+                      <small>{group.rows.length} {t('entries').toLowerCase()}</small>
+                    </span>
+                  </button>
+                  <div className="result-details">
+                    <div className="lane-detail-head">
+                      <span>{t('lane')}</span>
+                      <span>{t('name')}</span>
+                      <span>{t('class')}</span>
+                      <span>{t('house')}</span>
+                    </div>
+                    {group.rows.map((row) => {
+                      const registration = row.registration;
+                      const student = registration ? (studentMap.get(registration.studentIc) || {}) : {};
+                      return (
+                        <div className="lane-detail-grid" key={row.id}>
+                          <b>{row.laneNumber}</b>
+                          <strong>{registration ? displayEntryName(registration, student, group.event, t('team')) : '-'}</strong>
+                          <span>{registration ? displayEntryClass(registration, student) : '-'}</span>
+                          <span className={houseClassName(row.house || student.house)}>{row.house || student.house || '-'}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )) : <p className="empty">{t('noLanes')}</p>}
             </div>
           </section>
         )}
@@ -2639,7 +2761,7 @@ function App() {
                     <div className="registered-top">
                       <div>
                         <strong>{displayEntryName(registration, student, resultEvent, t('team'))}</strong>
-                        {!isHouseEntry(registration) && <small>{`${student.className || registration.className} - ${tGender(student.gender)} - ${registration.house}`}</small>}
+                        {!isHouseEntry(registration) && <small>{`${displayEntryClass(registration, student)} - ${tGender(student.gender)} - ${registration.house}`}</small>}
                       </div>
                       <b>{registration.points || 0}</b>
                     </div>
@@ -2715,7 +2837,7 @@ function App() {
                           <tr key={registration.id}>
                             <td>{participantNo}</td>
                             <td>{displayEntryName(registration, student, slipEvent, t('team'))}</td>
-                            <td>{student.className || registration.className}</td>
+                            <td>{displayEntryClass(registration, student)}</td>
                             <td>{registration.house || student.house}</td>
                             <td>{isResultPlace(registration.position) ? resultPlaceLabel(registration.position) : ''}</td>
                             <td></td>

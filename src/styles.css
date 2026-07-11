@@ -958,7 +958,9 @@ button {
 
 .result-detail-row,
 .result-detail-grid,
-.result-detail-head {
+.result-detail-head,
+.lane-detail-grid,
+.lane-detail-head {
   display: grid;
   align-items: center;
   gap: 10px;
@@ -975,6 +977,11 @@ button {
   grid-template-columns: minmax(92px, 0.55fr) minmax(160px, 1.5fr) minmax(80px, 0.8fr) minmax(100px, 1fr) 64px;
 }
 
+.lane-detail-grid,
+.lane-detail-head {
+  grid-template-columns: minmax(72px, 0.45fr) minmax(180px, 1.7fr) minmax(90px, 0.8fr) minmax(110px, 1fr);
+}
+
 .result-detail-head {
   color: var(--muted);
   background: var(--surface-soft);
@@ -984,17 +991,40 @@ button {
   text-transform: uppercase;
 }
 
+.lane-detail-head,
+.lane-detail-grid {
+  min-width: 0;
+}
+
+.lane-detail-head {
+  color: var(--muted);
+  background: var(--surface-soft);
+  font-size: 0.68rem;
+  font-weight: 1000;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
 .result-detail-row b,
-.result-detail-grid b {
+.result-detail-grid b,
+.lane-detail-grid b {
   font-size: 0.82rem;
   line-height: 1.1;
   text-align: center;
 }
 
 .result-detail-row small,
-.result-detail-grid span {
+.result-detail-grid span,
+.lane-detail-grid span {
   color: var(--muted);
   font-weight: 800;
+}
+
+.lane-detail-grid strong,
+.lane-detail-grid span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .result-detail-row em,
@@ -1669,15 +1699,19 @@ td .house {
   .category-grid,
   .points-preview,
   .result-detail-grid,
-  .result-detail-head {
+  .result-detail-head,
+  .lane-detail-grid,
+  .lane-detail-head {
     grid-template-columns: 1fr;
   }
 
-  .result-detail-head {
+  .result-detail-head,
+  .lane-detail-head {
     display: none;
   }
 
-  .result-detail-grid {
+  .result-detail-grid,
+  .lane-detail-grid {
     align-items: start;
   }
 }
