@@ -108,6 +108,7 @@ const DEFAULT_SETTINGS = {
   maxTarikTaliPerHouseYear: 4,
 };
 const SCHOOL_LOGO_PATH = '/logo-sjkc-shin-cheng.png';
+const LIVE_SUMMARY_VERSION = 2;
 const DEFAULT_EVENT_FORM = {
   startNo: 1,
   baseName: '',
@@ -681,8 +682,47 @@ const buildStudentKey = ({ name, chineseName, className }) => {
   return source.replace(/\|/g, '') ? `student-${hashString(source)}` : '';
 };
 const getStudentKey = (student) => String(student?.ic || student?.studentKey || student?.id || '').trim();
+const normalizeStudentProfileValue = (value) => String(value || '').trim().replace(/\s+/g, ' ').toLocaleUpperCase('ms-MY');
+const studentChineseNameKey = (student) => normalizeStudentProfileValue(student?.chineseName || student?.name);
+const studentProfileKey = (student) => {
+  const chineseName = studentChineseNameKey(student);
+  const className = normalizeStudentProfileValue(student?.className);
+  return chineseName && className ? `${chineseName}|${className}` : '';
+};
+const hasDuplicateStudentNames = (student) => {
+  const name = normalizeStudentProfileValue(student?.name);
+  const chineseName = normalizeStudentProfileValue(student?.chineseName);
+  return Boolean(name && chineseName && name === chineseName);
+};
+const buildCanonicalStudentMap = (students) => {
+  const canonicalStudents = new Map();
+  const uniqueChineseNames = new Map();
+  students.forEach((student) => {
+    const key = studentProfileKey(student);
+    if (!key || hasDuplicateStudentNames(student) || !String(student?.name || '').trim()) return;
+    if (!canonicalStudents.has(key)) canonicalStudents.set(key, student);
+    const chineseName = studentChineseNameKey(student);
+    if (!chineseName) return;
+    if (!uniqueChineseNames.has(chineseName)) {
+      uniqueChineseNames.set(chineseName, student);
+    } else if (getStudentKey(uniqueChineseNames.get(chineseName)) !== getStudentKey(student)) {
+      uniqueChineseNames.set(chineseName, null);
+    }
+  });
+  uniqueChineseNames.forEach((student, chineseName) => {
+    if (student) canonicalStudents.set(`name:${chineseName}`, student);
+  });
+  return canonicalStudents;
+};
+const resolveCanonicalStudent = (student, canonicalStudents) => {
+  if (!student || !hasDuplicateStudentNames(student)) return student || {};
+  return canonicalStudents.get(studentProfileKey(student)) || canonicalStudents.get(`name:${studentChineseNameKey(student)}`) || student;
+};
 const displayStudentName = (student, fallback = '') => {
-  const names = [student?.name, student?.chineseName].map((value) => String(value || '').trim()).filter(Boolean);
+  const names = [];
+  [student?.name, student?.chineseName].map((value) => String(value || '').trim()).filter(Boolean).forEach((name) => {
+    if (!names.some((item) => normalizeStudentProfileValue(item) === normalizeStudentProfileValue(name))) names.push(name);
+  });
   return names.length ? names.join(' / ') : fallback;
 };
 const isHouseEntry = (registration) => registration?.entryType === 'house';
@@ -690,10 +730,13 @@ const isRelayEntry = (registration) => registration?.entryType === 'relay';
 const getTeamCountPerHouse = (event) => Math.max(1, Math.min(8, Number(event?.teamCountPerHouse || 1) || 1));
 const clampTeamCountPerHouse = (value) => Math.max(1, Math.min(8, Number(value || 1) || 1));
 const getHouseEntryTeamNumber = (registration) => Math.max(1, Number(registration?.teamNumber || 1) || 1);
-const displayEntryName = (registration, student = {}, event = null, teamLabel = 'Team') => {
+const displayEntryName = (registration, student = {}, event = null, teamLabel = 'Team', resolveTeamMember = (member) => member) => {
   if (isRelayEntry(registration)) {
     const members = Array.isArray(registration.teamMembers) ? registration.teamMembers : [];
-    const names = members.map((member) => String(member.name || '').trim()).filter(Boolean);
+    const names = members.map((member) => displayStudentName(resolveTeamMember({
+      ...member,
+      chineseName: member.chineseName || member.name,
+    }), member.name)).filter(Boolean);
     return names.length ? names.join(' / ') : normalizeHouse(registration.house || student.house || registration.studentIc);
   }
   if (!isHouseEntry(registration)) return displayStudentName(student, registration.studentIc);
@@ -784,11 +827,150 @@ const houseClassName = (house) => {
   if (name.includes('橙') || name.includes('JINGGA') || name.includes('ORANGE')) return 'house orange';
   return 'house slate';
 };
+const compactEventForSummary = (event = {}) => ({
+  id: event.id || '',
+  no: Number(event.no || 0),
+  name: event.name || '',
+  baseName: event.baseName || '',
+  category: event.category || '',
+  type: event.type || '',
+  withoutStudent: Boolean(event.withoutStudent),
+  teamCountPerHouse: getTeamCountPerHouse(event),
+});
+const compactStudentForSummary = (student = {}) => ({
+  id: getStudentKey(student),
+  ic: getStudentKey(student),
+  studentKey: getStudentKey(student),
+  name: student.name || '',
+  chineseName: student.chineseName || '',
+  className: student.className || '',
+  gender: student.gender || '',
+  house: student.house || '',
+});
+const compactRegistrationForSummary = (registration = {}, student = {}, canonicalStudents = new Map()) => ({
+  id: registration.id || '',
+  eventId: registration.eventId || '',
+  entryType: registration.entryType || '',
+  studentIc: registration.studentIc || '',
+  house: registration.house || student.house || '',
+  className: registration.className || student.className || '',
+  position: registration.position || '',
+  points: Number(registration.points || 0),
+  teamNumber: registration.teamNumber || 1,
+  teamMembers: Array.isArray(registration.teamMembers)
+    ? registration.teamMembers.map((member) => {
+      const canonicalMember = resolveCanonicalStudent({
+        ...member,
+        chineseName: member.chineseName || member.name,
+      }, canonicalStudents);
+      return {
+        ...member,
+        name: canonicalMember.name || member.name || '',
+        chineseName: canonicalMember.chineseName || member.chineseName || member.name || '',
+        studentIc: getStudentKey(canonicalMember) || member.studentIc || '',
+      };
+    })
+    : [],
+  updatedMs: Number(registration.updatedMs || 0),
+  student: compactStudentForSummary(student),
+});
+const buildLiveSummary = ({ houses, events, registrations, students }) => {
+  const canonicalStudents = buildCanonicalStudentMap(students);
+  const studentMap = new Map(students.map((student) => [
+    getStudentKey(student),
+    resolveCanonicalStudent(student, canonicalStudents),
+  ]));
+  const eventMap = new Map(events.map((event) => [event.id, event]));
+  const houseTotals = houses.map((house) => ({ name: house, total: 0 }));
+  const classTotals = new Map();
+
+  registrations.forEach((registration) => {
+    if (!isResultPlace(registration.position)) return;
+    const student = studentMap.get(registration.studentIc) || {};
+    const house = normalizeHouse(registration.house || student.house);
+    const points = Number(registration.points || 0);
+    const row = houseTotals.find((item) => houseMatchKey(item.name) === houseMatchKey(house));
+    if (row) row.total += points;
+    if (student.className) classTotals.set(student.className, (classTotals.get(student.className) || 0) + points);
+  });
+
+  const viewResults = registrations
+    .filter((registration) => isResultPlace(registration.position))
+    .map((registration) => {
+      const student = studentMap.get(registration.studentIc) || {};
+      return {
+        ...compactRegistrationForSummary(registration, student, canonicalStudents),
+        event: compactEventForSummary(eventMap.get(registration.eventId)),
+      };
+    })
+    .filter((result) => result.event?.id);
+
+  const grouped = new Map();
+  viewResults.forEach((result) => {
+    const id = result.eventId || 'unknown';
+    if (!grouped.has(id)) grouped.set(id, { id, event: result.event, results: [], latestMs: 0 });
+    const group = grouped.get(id);
+    group.results.push(result);
+    group.latestMs = Math.max(group.latestMs, Number(result.updatedMs || 0));
+  });
+  const latestResultGroups = Array.from(grouped.values())
+    .map((group) => ({
+      ...group,
+      results: group.results.sort((a, b) => Number(a.position || 99) - Number(b.position || 99)),
+    }))
+    .sort((a, b) => b.latestMs - a.latestMs)
+    .slice(0, 12);
+
+  const athletes = new Map();
+  registrations.forEach((registration) => {
+    const position = Number(registration.position || 0);
+    if (![1, 2, 3].includes(position) || isHouseEntry(registration)) return;
+    const student = studentMap.get(registration.studentIc);
+    if (!student) return;
+    const studentKey = getStudentKey(student);
+    if (!studentKey) return;
+    if (!athletes.has(studentKey)) {
+      athletes.set(studentKey, {
+        student: compactStudentForSummary(student),
+        gender: normalizeGender(student.gender),
+        gold: 0,
+        silver: 0,
+        bronze: 0,
+      });
+    }
+    const row = athletes.get(studentKey);
+    if (position === 1) row.gold += 1;
+    if (position === 2) row.silver += 1;
+    if (position === 3) row.bronze += 1;
+  });
+  const athleteRows = Array.from(athletes.values()).sort((a, b) =>
+    b.gold - a.gold ||
+    b.silver - a.silver ||
+    b.bronze - a.bronze ||
+    displayStudentName(a.student).localeCompare(displayStudentName(b.student)));
+
+  return {
+    version: LIVE_SUMMARY_VERSION,
+    scoreData: {
+      houses: houseTotals.sort((a, b) => b.total - a.total || compareHouses(a.name, b.name)),
+      classes: Array.from(classTotals.entries())
+        .map(([name, total]) => ({ name, total }))
+        .sort((a, b) => b.total - a.total),
+    },
+    latestResultGroups,
+    athleteLeaders: {
+      male: athleteRows.find((row) => row.gender === 'Lelaki') || null,
+      female: athleteRows.find((row) => row.gender === 'Perempuan') || null,
+    },
+    updatedMs: Date.now(),
+  };
+};
 
 function App() {
   const fileInputRef = useRef(null);
   const liveBoardRef = useRef(null);
   const savedSettingsRef = useRef('');
+  const liveSummaryRefreshKeyRef = useRef('');
   const params = new URLSearchParams(window.location.search);
   const siteId = params.get('site') || import.meta.env.VITE_ESUKAN_SITE_ID || 'sinming-esukan';
 
@@ -800,10 +982,11 @@ function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('esukan-theme') || 'light');
   const [language, setLanguage] = useState(() => localStorage.getItem('esukan-language') || 'ms');
   const [isLiveBoardFullscreen, setIsLiveBoardFullscreen] = useState(false);
-  const [loadedSections, setLoadedSections] = useState({ settings: false, students: false, events: false, registrations: false });
+  const [loadedSections, setLoadedSections] = useState({ settings: false, liveSummary: false, students: false, events: false, registrations: false });
   const [uploadingStudents, setUploadingStudents] = useState(false);
   const [notice, setNotice] = useState('');
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [liveSummary, setLiveSummary] = useState(null);
   const [students, setStudents] = useState([]);
   const [events, setEvents] = useState([]);
   const [registrations, setRegistrations] = useState([]);
@@ -837,6 +1020,7 @@ function App() {
       students: collection(db, 'esukanSites', siteId, 'students'),
       events: collection(db, 'esukanSites', siteId, 'events'),
       registrations: collection(db, 'esukanSites', siteId, 'registrations'),
+      liveSummary: doc(db, 'esukanSites', siteId, 'summaries', 'liveBoard'),
     };
   }, [siteId]);
 
@@ -847,7 +1031,10 @@ function App() {
   const liveBoardHeaderSchool = String(settings.liveBoardHeaderSchool || settings.schoolName || DEFAULT_SETTINGS.schoolName).trim();
   const liveBoardHeaderTitle = String(settings.liveBoardHeaderTitle || DEFAULT_SETTINGS.liveBoardHeaderTitle).trim();
   const visibleTabs = ACCESS_LEVELS[accessRole]?.tabs || ACCESS_LEVELS.user.tabs;
-  const loading = !Object.values(loadedSections).every(Boolean);
+  const needsFullData = activeTab !== 'live';
+  const loading = !loadedSections.settings ||
+    (needsFullData && (!loadedSections.students || !loadedSections.events || !loadedSections.registrations)) ||
+    (!needsFullData && !loadedSections.liveSummary);
   const nextEventNo = useMemo(() => Math.max(0, ...events.map((event) => Number(event.no || 0))) + 1, [events]);
   const currentLanguage = LANGUAGE_OPTIONS.find((item) => item.id === language) || LANGUAGE_OPTIONS[0];
   const t = (key) => TEXT[language]?.[key] || TEXT.ms[key] || key;
@@ -967,23 +1154,40 @@ function App() {
     });
   }, [nextEventNo]);
 
+  const markLoaded = (key) => setLoadedSections((current) => ({ ...current, [key]: true }));
+  const markLoading = (keys) => setLoadedSections((current) => (
+    keys.reduce((next, key) => ({ ...next, [key]: false }), current)
+  ));
+  const handleSnapshotError = (key, error) => {
+    console.error(error);
+    markLoaded(key);
+    setNotice(`Could not load ${key}: ${error.message || 'Firebase error'}`);
+  };
+
   useEffect(() => {
     if (!refs) return undefined;
-    setLoadedSections({ settings: false, students: false, events: false, registrations: false });
-    const markLoaded = (key) => setLoadedSections((current) => ({ ...current, [key]: true }));
-    const handleSnapshotError = (key, error) => {
-      console.error(error);
-      markLoaded(key);
-      setNotice(`Could not load ${key}: ${error.message || 'Firebase error'}`);
-    };
+    markLoading(['settings']);
+    return onSnapshot(refs.settings, (snapshot) => {
+      const nextSettings = { ...DEFAULT_SETTINGS, ...(snapshot.exists() ? snapshot.data() : {}) };
+      setSettings(nextSettings);
+      savedSettingsRef.current = JSON.stringify({ ...nextSettings, updatedAt: undefined });
+      markLoaded('settings');
+    }, (error) => handleSnapshotError('settings', error));
+  }, [refs]);
 
+  useEffect(() => {
+    if (!refs) return undefined;
+    markLoading(['liveSummary']);
+    return onSnapshot(refs.liveSummary, (snapshot) => {
+      setLiveSummary(snapshot.exists() ? snapshot.data() : null);
+      markLoaded('liveSummary');
+    }, (error) => handleSnapshotError('liveSummary', error));
+  }, [refs]);
+
+  useEffect(() => {
+    if (!refs || !needsFullData) return undefined;
+    markLoading(['students', 'events', 'registrations']);
     const unsubscribers = [
-      onSnapshot(refs.settings, (snapshot) => {
-        const nextSettings = { ...DEFAULT_SETTINGS, ...(snapshot.exists() ? snapshot.data() : {}) };
-        setSettings(nextSettings);
-        savedSettingsRef.current = JSON.stringify({ ...nextSettings, updatedAt: undefined });
-        markLoaded('settings');
-      }, (error) => handleSnapshotError('settings', error)),
       onSnapshot(refs.students, (snapshot) => {
         setStudents(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort(sortByName));
         markLoaded('students');
@@ -1006,7 +1210,7 @@ function App() {
     ];
 
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
-  }, [refs]);
+  }, [refs, needsFullData]);
 
   useEffect(() => {
     if (!notice) return undefined;
@@ -1014,7 +1218,12 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [notice]);
 
-  const studentMap = useMemo(() => new Map(students.map((student) => [getStudentKey(student), student])), [students]);
+  const canonicalStudents = useMemo(() => buildCanonicalStudentMap(students), [students]);
+  const resolveStudent = (student) => resolveCanonicalStudent(student, canonicalStudents);
+  const studentMap = useMemo(() => new Map(students.map((student) => [
+    getStudentKey(student),
+    resolveCanonicalStudent(student, canonicalStudents),
+  ])), [canonicalStudents, students]);
   const eventMap = useMemo(() => new Map(events.map((event) => [event.id, event])), [events]);
   const registerEvent = eventMap.get(registerEventId);
   const resultEvent = eventMap.get(resultEventId);
@@ -1042,7 +1251,7 @@ function App() {
     if (houseCompare) return houseCompare;
     const classCompare = String(studentA.className || a.className || '').localeCompare(String(studentB.className || b.className || ''), undefined, { numeric: true });
     if (classCompare) return classCompare;
-    return displayEntryName(a, studentA, slipEvent, t('team')).localeCompare(displayEntryName(b, studentB, slipEvent, t('team')));
+    return displayEntryName(a, studentA, slipEvent, t('team'), resolveStudent).localeCompare(displayEntryName(b, studentB, slipEvent, t('team'), resolveStudent));
   });
   const registeredStudentSet = new Set(registrationsForRegisterEvent.map((item) => item.studentIc));
   const studentClassOptions = useMemo(() => (
@@ -1089,7 +1298,7 @@ function App() {
       return String(a.name || '').localeCompare(String(b.name || ''));
     });
 
-  const scoreData = useMemo(() => {
+  const fullScoreData = useMemo(() => {
     const houseTotals = houses.map((house) => ({ name: house, total: 0 }));
     const classTotals = new Map();
 
@@ -1112,6 +1321,7 @@ function App() {
         .sort((a, b) => b.total - a.total),
     };
   }, [houses, registrations, studentMap]);
+  const scoreData = activeTab === 'live' && liveSummary?.scoreData ? liveSummary.scoreData : fullScoreData;
 
   const viewResults = useMemo(() => {
     return registrations
@@ -1158,9 +1368,12 @@ function App() {
         return tEventDisplayName(a.event).localeCompare(tEventDisplayName(b.event), undefined, { numeric: true });
       });
   };
-  const latestResultGroups = useMemo(() => {
+  const fullLatestResultGroups = useMemo(() => {
     return buildResultGroups(viewResults, 'latest').slice(0, 12);
   }, [language, viewResults]);
+  const latestResultGroups = activeTab === 'live' && Array.isArray(liveSummary?.latestResultGroups)
+    ? liveSummary.latestResultGroups
+    : fullLatestResultGroups;
   const latestLiveResultId = latestResultGroups[0]?.id || '';
   const latestLiveResultStamp = latestResultGroups[0]?.latestMs || 0;
   const latestWinnerRows = latestResultGroups.slice(0, 3).map((group) => ({
@@ -1211,7 +1424,7 @@ function App() {
       })
       .filter((group) => group.rows.length)
   ), [eventRegistrations, laneEventFilter, laneEventOptions]);
-  const athleteLeaders = useMemo(() => {
+  const fullAthleteLeaders = useMemo(() => {
     const athletes = new Map();
     registrations.forEach((registration) => {
       const position = Number(registration.position || 0);
@@ -1245,6 +1458,9 @@ function App() {
       female: rows.find((row) => row.gender === 'Perempuan') || null,
     };
   }, [registrations, studentMap]);
+  const athleteLeaders = activeTab === 'live' && liveSummary?.athleteLeaders
+    ? liveSummary.athleteLeaders
+    : fullAthleteLeaders;
   const jurySheetRows = sortedSlipRegistrations
     .map((registration) => ({
       registration,
@@ -1255,7 +1471,7 @@ function App() {
       if (houseCompare) return houseCompare;
       const classCompare = String(a.student.className || a.registration.className || '').localeCompare(String(b.student.className || b.registration.className || ''), undefined, { numeric: true });
       if (classCompare) return classCompare;
-      return displayEntryName(a.registration, a.student, slipEvent, t('team')).localeCompare(displayEntryName(b.registration, b.student, slipEvent, t('team')));
+      return displayEntryName(a.registration, a.student, slipEvent, t('team'), resolveStudent).localeCompare(displayEntryName(b.registration, b.student, slipEvent, t('team'), resolveStudent));
     })
     .map((row, index) => ({ ...row, participantNo: index + 1 }));
 
@@ -1278,6 +1494,45 @@ function App() {
     RESULT_PLACES.map((position) => [position, Number(eventForm[`points${position}`] || 0)]),
   );
 
+  const refreshLiveSummary = async (overrides = {}) => {
+    if (!refs) return;
+    const nextSettings = overrides.settings || settings;
+    const nextHouses = sortHouseList(overrides.houses || nextSettings.houses || houses);
+    const summary = buildLiveSummary({
+      houses: nextHouses,
+      events: overrides.events || events,
+      registrations: overrides.registrations || registrations,
+      students: overrides.students || students,
+    });
+    try {
+      await setDoc(refs.liveSummary, { ...summary, updatedAt: serverTimestamp() }, { merge: true });
+    } catch (error) {
+      console.error(error);
+      setNotice(`Saved, but live board summary did not refresh: ${error.message || 'Firebase error'}`);
+    }
+  };
+
+  useEffect(() => {
+    if (!needsFullData || !loadedSections.students || !loadedSections.events || !loadedSections.registrations) return;
+    const latestRegistrationMs = Math.max(0, ...registrations.map((registration) => Number(registration.updatedMs || 0)));
+    const summaryUpdatedMs = Number(liveSummary?.updatedMs || 0);
+    if (liveSummary?.version === LIVE_SUMMARY_VERSION && liveSummary?.scoreData && summaryUpdatedMs >= latestRegistrationMs) return;
+    const refreshKey = `${students.length}:${events.length}:${registrations.length}:${latestRegistrationMs}:${summaryUpdatedMs}:${liveSummary?.version || 0}`;
+    if (liveSummaryRefreshKeyRef.current === refreshKey) return;
+    liveSummaryRefreshKeyRef.current = refreshKey;
+    refreshLiveSummary();
+  }, [
+    needsFullData,
+    loadedSections.students,
+    loadedSections.events,
+    loadedSections.registrations,
+    students,
+    events,
+    registrations,
+    liveSummary?.updatedMs,
+    liveSummary?.version,
+  ]);
+
   const saveSettings = async () => {
     if (accessRole === 'user') {
       setNotice('Staff access required.');
@@ -1291,6 +1546,7 @@ function App() {
       return;
     }
     await setDoc(refs.settings, { ...payload, updatedAt: serverTimestamp() }, { merge: true });
+    await refreshLiveSummary({ settings: payload, houses: payload.houses });
     savedSettingsRef.current = settingsSignature;
     setNotice('Settings saved.');
   };
@@ -1322,10 +1578,13 @@ function App() {
     const scoring = getScoring();
     const withoutStudent = Boolean(eventForm.withoutStudent);
     const teamCountPerHouse = withoutStudent ? clampTeamCountPerHouse(eventForm.teamCountPerHouse) : 1;
+    const createdEvents = [];
+    const createdRegistrations = [];
     sortedCategories.forEach((category, index) => {
       const eventName = buildEventName(baseName, category);
       const id = `${timestamp}-${index}-${slugify(eventName)}`;
-      batch.set(doc(refs.events, id), {
+      const newEvent = {
+        id,
         no: Number(eventForm.startNo || 1) + index,
         name: eventName,
         baseName,
@@ -1337,12 +1596,15 @@ function App() {
         scoring,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      });
+      };
+      createdEvents.push(newEvent);
+      batch.set(doc(refs.events, id), newEvent);
       if (withoutStudent) {
         houses.forEach((house) => {
           Array.from({ length: teamCountPerHouse }, (_, teamIndex) => teamIndex + 1).forEach((teamNumber) => {
             const entryKey = getHouseEntryKey(house, teamNumber);
-            batch.set(doc(refs.registrations, `${id}_${entryKey}`), {
+            const newRegistration = {
+              id: `${id}_${entryKey}`,
               eventId: id,
               entryType: 'house',
               studentIc: entryKey,
@@ -1353,13 +1615,19 @@ function App() {
               points: 0,
               updatedAt: serverTimestamp(),
               updatedMs: Date.now(),
-            }, { merge: true });
+            };
+            createdRegistrations.push(newRegistration);
+            batch.set(doc(refs.registrations, newRegistration.id), newRegistration, { merge: true });
           });
         });
       }
     });
 
     await batch.commit();
+    await refreshLiveSummary({
+      events: [...events, ...createdEvents].sort((a, b) => Number(a.no || 0) - Number(b.no || 0)),
+      registrations: [...registrations, ...createdRegistrations],
+    });
     setRegisterEventId(`${timestamp}-0-${slugify(buildEventName(baseName, sortedCategories[0]))}`);
     setResultEventId(`${timestamp}-0-${slugify(buildEventName(baseName, sortedCategories[0]))}`);
     setSlipEventId(`${timestamp}-0-${slugify(buildEventName(baseName, sortedCategories[0]))}`);
@@ -1446,6 +1714,12 @@ function App() {
       }
       if (writeCount > 0) batches.push(batch);
       await Promise.all(batches.map((queuedBatch) => queuedBatch.commit()));
+      const nextStudentMap = new Map(students.map((student) => [getStudentKey(student), student]));
+      validStudents.forEach((student) => nextStudentMap.set(student.studentKey, student));
+      const nextSettings = importedHouses.length
+        ? { ...settings, houses: sortHouseList(importedHouses) }
+        : settings;
+      await refreshLiveSummary({ settings: nextSettings, houses: nextSettings.houses, students: Array.from(nextStudentMap.values()) });
       setNotice(`${validStudents.length} students imported. Houses updated from template.`);
     } catch (error) {
       console.error(error);
@@ -1504,6 +1778,14 @@ function App() {
       }, { merge: true });
     });
     await batch.commit();
+    await refreshLiveSummary({
+      students: students.map((item) => (getStudentKey(item) === studentKey ? { ...item, ...payload } : item)),
+      registrations: registrations.map((registration) => (
+        registration.studentIc === studentKey
+          ? { ...registration, className: payload.className, house: payload.house, updatedMs: Date.now() }
+          : registration
+      )),
+    });
     cancelStudentEdit();
     setNotice('Student updated.');
   };
@@ -1523,6 +1805,10 @@ function App() {
     });
     batch.delete(doc(refs.students, studentKey));
     await batch.commit();
+    await refreshLiveSummary({
+      students: students.filter((item) => getStudentKey(item) !== studentKey),
+      registrations: registrations.filter((registration) => registration.studentIc !== studentKey),
+    });
     if (editingStudentKey === studentKey) cancelStudentEdit();
     setNotice('Student deleted.');
   };
@@ -1556,6 +1842,9 @@ function App() {
       return;
     }
     if (!eventEditForm) return;
+    const scoring = Object.fromEntries(
+      RESULT_PLACES.map((position) => [position, Number(eventEditForm[`points${position}`] || 0)]),
+    );
     const payload = {
       no: Number(eventEditForm.no || 0),
       name: eventEditForm.name.trim(),
@@ -1566,9 +1855,7 @@ function App() {
       withoutStudent: Boolean(eventEditForm.withoutStudent),
       teamCountPerHouse: eventEditForm.withoutStudent ? clampTeamCountPerHouse(eventEditForm.teamCountPerHouse) : 1,
       scoring: {
-        ...Object.fromEntries(
-          RESULT_PLACES.map((position) => [position, Number(eventEditForm[`points${position}`] || 0)]),
-        ),
+        ...scoring,
         5: deleteField(),
       },
       updatedAt: serverTimestamp(),
@@ -1580,11 +1867,13 @@ function App() {
     const batch = writeBatch(db);
     batch.set(doc(refs.events, event.id), payload, { merge: true });
     const eventRegistrationRows = registrations.filter((registration) => registration.eventId === event.id);
+    let nextEventRegistrationRows = eventRegistrationRows;
     if (payload.withoutStudent) {
       if (!event.withoutStudent) {
         eventRegistrationRows.forEach((registration) => {
           batch.delete(doc(refs.registrations, registration.id));
         });
+        nextEventRegistrationRows = [];
       }
       const expectedHouseEntryKeys = new Set();
       const existingHouseEntries = new Map(eventRegistrationRows.filter(isHouseEntry).map((registration) => [registration.studentIc, registration]));
@@ -1593,7 +1882,8 @@ function App() {
           const entryKey = getHouseEntryKey(house, teamNumber);
           expectedHouseEntryKeys.add(entryKey);
           const existingEntry = existingHouseEntries.get(entryKey);
-          batch.set(doc(refs.registrations, `${event.id}_${entryKey}`), {
+          const nextRegistration = {
+            id: `${event.id}_${entryKey}`,
             eventId: event.id,
             entryType: 'house',
             studentIc: entryKey,
@@ -1604,20 +1894,34 @@ function App() {
             points: Number(existingEntry?.points || 0),
             updatedAt: serverTimestamp(),
             updatedMs: existingEntry?.updatedMs || Date.now(),
-          }, { merge: true });
+          };
+          nextEventRegistrationRows = [
+            ...nextEventRegistrationRows.filter((registration) => registration.studentIc !== entryKey),
+            nextRegistration,
+          ];
+          batch.set(doc(refs.registrations, nextRegistration.id), nextRegistration, { merge: true });
         });
       });
       eventRegistrationRows.filter(isHouseEntry).forEach((registration) => {
         if (!expectedHouseEntryKeys.has(registration.studentIc)) {
           batch.delete(doc(refs.registrations, registration.id));
+          nextEventRegistrationRows = nextEventRegistrationRows.filter((item) => item.id !== registration.id);
         }
       });
     } else if (event.withoutStudent) {
       eventRegistrationRows.filter(isHouseEntry).forEach((registration) => {
         batch.delete(doc(refs.registrations, registration.id));
       });
+      nextEventRegistrationRows = eventRegistrationRows.filter((registration) => !isHouseEntry(registration));
     }
     await batch.commit();
+    await refreshLiveSummary({
+      events: events.map((item) => (item.id === event.id ? { ...item, ...payload, scoring } : item)),
+      registrations: [
+        ...registrations.filter((registration) => registration.eventId !== event.id),
+        ...nextEventRegistrationRows,
+      ],
+    });
     cancelEventEdit();
     setNotice('Event updated.');
   };
@@ -1690,6 +1994,7 @@ function App() {
     const id = `${registerEvent.id}_${studentKey}`;
     if (registeredStudentSet.has(studentKey)) {
       await deleteDoc(doc(refs.registrations, id));
+      await refreshLiveSummary({ registrations: registrations.filter((registration) => registration.id !== id) });
       return;
     }
 
@@ -1699,7 +2004,8 @@ function App() {
       return;
     }
 
-    await setDoc(doc(refs.registrations, id), {
+    const newRegistration = {
+      id,
       eventId: registerEvent.id,
       studentIc: studentKey,
       house: student.house,
@@ -1708,7 +2014,9 @@ function App() {
       points: 0,
       updatedAt: serverTimestamp(),
       updatedMs: Date.now(),
-    });
+    };
+    await setDoc(doc(refs.registrations, id), newRegistration);
+    await refreshLiveSummary({ registrations: [...registrations, newRegistration] });
     setResultEventId(registerEvent.id);
     setSlipEventId(registerEvent.id);
   };
@@ -1721,12 +2029,18 @@ function App() {
     const event = eventMap.get(registration.eventId);
     const nextPosition = isResultPlace(position) ? position : '';
     const points = event && nextPosition ? Number(event.scoring?.[nextPosition] || 0) : 0;
+    const updatedMs = Date.now();
     await setDoc(doc(refs.registrations, registration.id), {
       position: nextPosition,
       points,
       updatedAt: serverTimestamp(),
-      updatedMs: Date.now(),
+      updatedMs,
     }, { merge: true });
+    await refreshLiveSummary({
+      registrations: registrations.map((item) => (
+        item.id === registration.id ? { ...item, position: nextPosition, points, updatedMs } : item
+      )),
+    });
   };
 
   const deleteEvent = async (eventId) => {
@@ -1743,6 +2057,10 @@ function App() {
     });
     batch.delete(doc(refs.events, eventId));
     await batch.commit();
+    await refreshLiveSummary({
+      events: events.filter((item) => item.id !== eventId),
+      registrations: registrations.filter((registration) => registration.eventId !== eventId),
+    });
     if (editingEventId === eventId) cancelEventEdit();
     setNotice('Event deleted.');
   };
@@ -1780,7 +2098,7 @@ function App() {
       if (houseCompare) return houseCompare;
       const classCompare = String(studentA.className || a.className || '').localeCompare(String(studentB.className || b.className || ''), undefined, { numeric: true });
       if (classCompare) return classCompare;
-      return displayEntryName(a, studentA, event, t('team')).localeCompare(displayEntryName(b, studentB, event, t('team')));
+      return displayEntryName(a, studentA, event, t('team'), resolveStudent).localeCompare(displayEntryName(b, studentB, event, t('team'), resolveStudent));
     });
     return eventRows.map((registration, index) => ({
       registration,
@@ -1794,7 +2112,7 @@ function App() {
       .map(({ registration, student, participantNo }) => `
         <tr>
           <td>${escapeHtml(participantNo)}</td>
-          <td>${escapeHtml(displayEntryName(registration, student, event, t('team')))}</td>
+          <td>${escapeHtml(displayEntryName(registration, student, event, t('team'), resolveStudent))}</td>
           <td>${escapeHtml(displayEntryClass(registration, student))}</td>
           <td>${escapeHtml(registration.house || student.house || '')}</td>
           <td>${escapeHtml(isResultPlace(registration.position) ? resultPlaceLabel(registration.position) : '')}</td>
@@ -2164,7 +2482,7 @@ function App() {
                               <div className="result-detail-row" key={result.id}>
                                 <b>{resultPlaceLabel(result.position)}</b>
                                 <span>
-                                  <strong>{displayEntryName(result, result.student, group.event, t('team'))}</strong>
+                                  <strong>{displayEntryName(result, result.student, group.event, t('team'), resolveStudent)}</strong>
                                   {!isHouseEntry(result) && <small>{`${displayEntryClass(result, result.student)} - ${result.house || result.student?.house || '-'}`}</small>}
                                 </span>
                                 <em>{result.points || 0}</em>
@@ -2591,7 +2909,7 @@ function App() {
                         <div className="registered-row" key={registration.id}>
                           <div className="registered-top">
                             <div>
-                              <strong>{displayEntryName(registration, student, registerEvent, t('team'))}</strong>
+                              <strong>{displayEntryName(registration, student, registerEvent, t('team'), resolveStudent)}</strong>
                               {!isHouseEntry(registration) && <small>{`${displayEntryClass(registration, student)} - ${tGender(student.gender)} - ${registration.house}`}</small>}
                             </div>
                             {!registerEvent?.withoutStudent && <button className="position clear" type="button" onClick={() => toggleRegistration({ ...student, ic: registration.studentIc })}>{t('remove')}</button>}
@@ -2654,7 +2972,7 @@ function App() {
                         {group.results.map((result) => (
                           <div className="result-detail-grid" key={result.id}>
                             <b>{resultPlaceLabel(result.position)}</b>
-                            <strong>{displayEntryName(result, result.student, group.event, t('team'))}</strong>
+                            <strong>{displayEntryName(result, result.student, group.event, t('team'), resolveStudent)}</strong>
                             <span>{displayEntryClass(result, result.student)}</span>
                             <span>{result.house || result.student?.house || '-'}</span>
                             <em>{result.points || 0}</em>
@@ -2714,7 +3032,7 @@ function App() {
                       return (
                         <div className="lane-detail-grid" key={row.id}>
                           <b>{row.laneNumber}</b>
-                          <strong>{registration ? displayEntryName(registration, student, group.event, t('team')) : '-'}</strong>
+                          <strong>{registration ? displayEntryName(registration, student, group.event, t('team'), resolveStudent) : '-'}</strong>
                           <span>{registration ? displayEntryClass(registration, student) : '-'}</span>
                           <span className={houseClassName(row.house || student.house)}>{row.house || student.house || '-'}</span>
                         </div>
@@ -2760,7 +3078,7 @@ function App() {
                   <div className="registered-row" key={registration.id}>
                     <div className="registered-top">
                       <div>
-                        <strong>{displayEntryName(registration, student, resultEvent, t('team'))}</strong>
+                        <strong>{displayEntryName(registration, student, resultEvent, t('team'), resolveStudent)}</strong>
                         {!isHouseEntry(registration) && <small>{`${displayEntryClass(registration, student)} - ${tGender(student.gender)} - ${registration.house}`}</small>}
                       </div>
                       <b>{registration.points || 0}</b>
@@ -2836,7 +3154,7 @@ function App() {
                         return (
                           <tr key={registration.id}>
                             <td>{participantNo}</td>
-                            <td>{displayEntryName(registration, student, slipEvent, t('team'))}</td>
+                            <td>{displayEntryName(registration, student, slipEvent, t('team'), resolveStudent)}</td>
                             <td>{displayEntryClass(registration, student)}</td>
                             <td>{registration.house || student.house}</td>
                             <td>{isResultPlace(registration.position) ? resultPlaceLabel(registration.position) : ''}</td>
