@@ -37,7 +37,8 @@ import {
   Users,
 } from 'lucide-react';
 
-const DEFAULT_HOUSES = ['红', '黄', '蓝', '青'];
+const CANONICAL_HOUSES = ['红 MERAH', '黄 KUNING', '蓝 BIRU', '青 HIJAU'];
+const DEFAULT_HOUSES = CANONICAL_HOUSES;
 const HOUSE_COLOR_ORDER = [
   ['红', 'MERAH', 'RED'],
   ['黄', 'KUNING', 'YELLOW'],
@@ -665,7 +666,21 @@ const hasFirebaseConfig = Boolean(
 const firebaseApp = hasFirebaseConfig ? initializeApp(firebaseConfig) : null;
 const db = firebaseApp ? getFirestore(firebaseApp) : null;
 
-const normalizeHouse = (value) => String(value || '').trim();
+const normalizeHouse = (value) => {
+  const house = String(value || '').trim();
+  if (!house) return '';
+  const key = house.toLocaleUpperCase('ms-MY');
+  const colorIndex = HOUSE_COLOR_ORDER.findIndex((tokens) => tokens.some((token) => key.includes(token)));
+  return colorIndex >= 0 ? CANONICAL_HOUSES[colorIndex] : house;
+};
+const normalizeStudentRecord = (student = {}) => ({ ...student, house: normalizeHouse(student.house) });
+const normalizeRegistrationRecord = (registration = {}) => ({ ...registration, house: normalizeHouse(registration.house) });
+const normalizeEventRecord = (event = {}) => ({
+  ...event,
+  lanePlan: Array.isArray(event.lanePlan)
+    ? event.lanePlan.map((lane) => ({ ...lane, house: normalizeHouse(lane.house) }))
+    : event.lanePlan,
+});
 const houseMatchKey = (value) => normalizeHouse(value).toLocaleUpperCase('ms-MY');
 const getHouseColorOrder = (house) => {
   const key = houseMatchKey(house);
@@ -695,6 +710,56 @@ const sortHouseList = (items) => {
   return Array.from(unique.values()).sort(compareHouses);
 };
 const splitHouseList = (value) => sortHouseList(String(value || '').split(/[,，;；\n\r]+/));
+const mergeHouseScoreRows = (rows) => {
+  const totals = new Map();
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const name = normalizeHouse(row?.name);
+    if (!name) return;
+    totals.set(name, (totals.get(name) || 0) + Number(row?.total || 0));
+  });
+  return Array.from(totals, ([name, total]) => ({ name, total }))
+    .sort((a, b) => b.total - a.total || compareHouses(a.name, b.name));
+};
+const normalizeLiveSummary = (summary) => {
+  if (!summary) return null;
+  const normalizeResult = (result) => ({
+    ...result,
+    house: normalizeHouse(result.house),
+    student: result.student ? normalizeStudentRecord(result.student) : result.student,
+  });
+  const normalizeResultGroup = (group) => ({
+    ...group,
+    results: Array.isArray(group.results) ? group.results.map(normalizeResult) : [],
+  });
+  return {
+    ...summary,
+    scoreData: summary.scoreData ? {
+      ...summary.scoreData,
+      houses: mergeHouseScoreRows(summary.scoreData.houses),
+    } : summary.scoreData,
+    latestResultGroups: Array.isArray(summary.latestResultGroups) ? summary.latestResultGroups.map(normalizeResultGroup) : summary.latestResultGroups,
+    resultGroups: Array.isArray(summary.resultGroups) ? summary.resultGroups.map(normalizeResultGroup) : summary.resultGroups,
+    laneGroups: Array.isArray(summary.laneGroups) ? summary.laneGroups.map((group) => ({
+      ...group,
+      rows: Array.isArray(group.rows) ? group.rows.map((row) => ({
+        ...row,
+        house: normalizeHouse(row.house),
+        registration: row.registration ? normalizeResult(row.registration) : row.registration,
+      })) : [],
+    })) : summary.laneGroups,
+    athleteLeaders: summary.athleteLeaders ? {
+      ...summary.athleteLeaders,
+      male: summary.athleteLeaders.male ? {
+        ...summary.athleteLeaders.male,
+        student: normalizeStudentRecord(summary.athleteLeaders.male.student),
+      } : null,
+      female: summary.athleteLeaders.female ? {
+        ...summary.athleteLeaders.female,
+        student: normalizeStudentRecord(summary.athleteLeaders.female.student),
+      } : null,
+    } : summary.athleteLeaders,
+  };
+};
 const sortByName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''));
 const hashString = (value) => {
   let hash = 0;
@@ -875,14 +940,14 @@ const compactStudentForSummary = (student = {}) => ({
   chineseName: student.chineseName || '',
   className: student.className || '',
   gender: student.gender || '',
-  house: student.house || '',
+  house: normalizeHouse(student.house),
 });
 const compactRegistrationForSummary = (registration = {}, student = {}, canonicalStudents = new Map()) => ({
   id: registration.id || '',
   eventId: registration.eventId || '',
   entryType: registration.entryType || '',
   studentIc: registration.studentIc || '',
-  house: registration.house || student.house || '',
+  house: normalizeHouse(registration.house || student.house),
   className: registration.className || student.className || '',
   position: registration.position || '',
   points: Number(registration.points || 0),
@@ -973,7 +1038,7 @@ const buildLiveSummary = ({ houses, events, registrations, students }) => {
         return {
           id: registration?.id || `${event.id}-lane-${laneNumber}`,
           laneNumber,
-          house: registration?.house || lane.house || '',
+          house: normalizeHouse(registration?.house || lane.house),
           registration: registration ? compactRegistrationForSummary(registration, student, canonicalStudents) : null,
         };
       })
@@ -1257,7 +1322,7 @@ function App() {
     if (!refs) return undefined;
     markLoading(['liveSummary']);
     return onSnapshot(refs.liveSummary, (snapshot) => {
-      setLiveSummary(snapshot.exists() ? snapshot.data() : null);
+      setLiveSummary(snapshot.exists() ? normalizeLiveSummary(snapshot.data()) : null);
       markLoaded('liveSummary');
     }, (error) => handleSnapshotError('liveSummary', error));
   }, [refs]);
@@ -1267,12 +1332,12 @@ function App() {
     markLoading(['students', 'events', 'registrations']);
     const unsubscribers = [
       onSnapshot(refs.students, (snapshot) => {
-        setStudents(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort(sortByName));
+        setStudents(snapshot.docs.map((item) => normalizeStudentRecord({ id: item.id, ...item.data() })).sort(sortByName));
         markLoaded('students');
       }, (error) => handleSnapshotError('students', error)),
       onSnapshot(refs.events, (snapshot) => {
         const nextEvents = snapshot.docs
-          .map((item) => ({ id: item.id, ...item.data() }))
+          .map((item) => normalizeEventRecord({ id: item.id, ...item.data() }))
           .sort((a, b) => Number(a.no || 0) - Number(b.no || 0));
         setEvents(nextEvents);
         setRegisterEventId((current) => current || (nextEvents[0] ? nextEvents[0].id : ''));
@@ -1281,7 +1346,7 @@ function App() {
         markLoaded('events');
       }, (error) => handleSnapshotError('events', error)),
       onSnapshot(refs.registrations, (snapshot) => {
-        const nextRegistrations = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+        const nextRegistrations = snapshot.docs.map((item) => normalizeRegistrationRecord({ id: item.id, ...item.data() }));
         runScoreTransition(() => setRegistrations(nextRegistrations));
         markLoaded('registrations');
       }, (error) => handleSnapshotError('registrations', error)),
@@ -1307,7 +1372,7 @@ function App() {
       where('className', '<', yearEnd),
     )).then((snapshot) => {
       if (cancelled) return;
-      setStudents(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort(sortByName));
+      setStudents(snapshot.docs.map((item) => normalizeStudentRecord({ id: item.id, ...item.data() })).sort(sortByName));
       markLoaded('students');
     }).catch((error) => {
       if (!cancelled) handleSnapshotError('students', error);
