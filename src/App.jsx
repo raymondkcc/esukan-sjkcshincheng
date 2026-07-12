@@ -112,7 +112,7 @@ const DEFAULT_SETTINGS = {
   maxTarikTaliPerHouseYear: 4,
 };
 const SCHOOL_LOGO_PATH = '/logo-sjkc-shin-cheng.png';
-const LIVE_SUMMARY_VERSION = 4;
+const LIVE_SUMMARY_VERSION = 6;
 const STUDENT_YEARS = [1, 2, 3, 4, 5, 6];
 const DEFAULT_LANE_COUNT = 8;
 const DEFAULT_EVENT_FORM = {
@@ -821,6 +821,31 @@ const studentProfileKey = (student) => {
   const className = normalizeStudentProfileValue(student?.className);
   return chineseName && className ? `${chineseName}|${className}` : '';
 };
+const studentClassHouseKey = (student) => {
+  const className = normalizeStudentProfileValue(student?.className);
+  const house = houseMatchKey(student?.house);
+  return className && house ? `${className}|${house}` : '';
+};
+const studentNameEditDistance = (first, second) => {
+  const source = Array.from(String(first || ''));
+  const target = Array.from(String(second || ''));
+  if (Math.abs(source.length - target.length) > 1) return 2;
+  const previous = Array.from({ length: target.length + 1 }, (_, index) => index);
+  for (let sourceIndex = 1; sourceIndex <= source.length; sourceIndex += 1) {
+    let diagonal = previous[0];
+    previous[0] = sourceIndex;
+    for (let targetIndex = 1; targetIndex <= target.length; targetIndex += 1) {
+      const temporary = previous[targetIndex];
+      previous[targetIndex] = Math.min(
+        previous[targetIndex] + 1,
+        previous[targetIndex - 1] + 1,
+        diagonal + (source[sourceIndex - 1] === target[targetIndex - 1] ? 0 : 1),
+      );
+      diagonal = temporary;
+    }
+  }
+  return previous[target.length];
+};
 const hasDuplicateStudentNames = (student) => {
   const name = normalizeStudentProfileValue(student?.name);
   const chineseName = normalizeStudentProfileValue(student?.chineseName);
@@ -829,6 +854,7 @@ const hasDuplicateStudentNames = (student) => {
 const buildCanonicalStudentMap = (students) => {
   const canonicalStudents = new Map();
   const uniqueChineseNames = new Map();
+  const classHouseCandidates = new Map();
   students.forEach((student) => {
     const key = studentProfileKey(student);
     if (!key || hasDuplicateStudentNames(student) || !String(student?.name || '').trim()) return;
@@ -840,15 +866,30 @@ const buildCanonicalStudentMap = (students) => {
     } else if (getStudentKey(uniqueChineseNames.get(chineseName)) !== getStudentKey(student)) {
       uniqueChineseNames.set(chineseName, null);
     }
+    const classHouseKey = studentClassHouseKey(student);
+    if (classHouseKey) {
+      const candidates = classHouseCandidates.get(classHouseKey) || [];
+      candidates.push(student);
+      classHouseCandidates.set(classHouseKey, candidates);
+    }
   });
   uniqueChineseNames.forEach((student, chineseName) => {
     if (student) canonicalStudents.set(`name:${chineseName}`, student);
+  });
+  classHouseCandidates.forEach((candidates, classHouseKey) => {
+    canonicalStudents.set(`fuzzy:${classHouseKey}`, candidates);
   });
   return canonicalStudents;
 };
 const resolveCanonicalStudent = (student, canonicalStudents) => {
   if (!student || !hasDuplicateStudentNames(student)) return student || {};
-  return canonicalStudents.get(studentProfileKey(student)) || canonicalStudents.get(`name:${studentChineseNameKey(student)}`) || student;
+  const exact = canonicalStudents.get(studentProfileKey(student)) || canonicalStudents.get(`name:${studentChineseNameKey(student)}`);
+  if (exact) return exact;
+  const candidates = canonicalStudents.get(`fuzzy:${studentClassHouseKey(student)}`) || [];
+  const fuzzyMatches = candidates.filter((candidate) => (
+    studentNameEditDistance(studentChineseNameKey(student), studentChineseNameKey(candidate)) === 1
+  ));
+  return fuzzyMatches.length === 1 ? fuzzyMatches[0] : student;
 };
 const displayStudentName = (student, fallback = '') => {
   const names = [];
@@ -1432,10 +1473,10 @@ function App() {
     resolveCanonicalStudent(student, canonicalStudents),
   ])), [canonicalStudents, students]);
   const onDemandEvents = useMemo(() => (
-    ['viewResults', 'lanes'].includes(activeTab) && Array.isArray(liveSummary?.eventOptions)
+    ['viewResults', 'lanes'].includes(activeTab) && summarySupportsOnDemandViews
       ? liveSummary.eventOptions
       : events
-  ), [activeTab, events, liveSummary?.eventOptions]);
+  ), [activeTab, events, liveSummary?.eventOptions, summarySupportsOnDemandViews]);
   const eventMap = useMemo(() => new Map(onDemandEvents.map((event) => [event.id, event])), [onDemandEvents]);
   const registerEvent = eventMap.get(registerEventId);
   const resultEvent = eventMap.get(resultEventId);
@@ -1581,7 +1622,7 @@ function App() {
   const scoreData = activeTab === 'live' && liveSummary?.scoreData ? liveSummary.scoreData : fullScoreData;
 
   const viewResults = useMemo(() => {
-    if (activeTab === 'viewResults' && Array.isArray(liveSummary?.resultGroups)) {
+    if (activeTab === 'viewResults' && summarySupportsOnDemandViews) {
       return liveSummary.resultGroups.flatMap((group) => group.results.map((result) => ({
         ...result,
         student: result.student || {},
@@ -1600,7 +1641,7 @@ function App() {
         if (eventCompare) return eventCompare;
         return Number(a.position || 99) - Number(b.position || 99);
       });
-  }, [activeTab, eventMap, liveSummary?.resultGroups, registrations, studentMap]);
+  }, [activeTab, eventMap, liveSummary?.resultGroups, registrations, studentMap, summarySupportsOnDemandViews]);
   const resultEventOptions = useMemo(() => (
     onDemandEvents
       .map((event) => ({ id: event.id, event }))
@@ -1653,7 +1694,7 @@ function App() {
   ), [viewResultEventFilter, viewResults]);
   const viewResultGroups = useMemo(() => buildResultGroups(filteredViewResults), [filteredViewResults, language]);
   const laneEventOptions = useMemo(() => {
-    if (activeTab === 'lanes' && Array.isArray(liveSummary?.laneGroups)) {
+    if (activeTab === 'lanes' && summarySupportsOnDemandViews) {
       return liveSummary.laneGroups
         .map((group) => group.event)
         .sort((a, b) => Number(a.no || 0) - Number(b.no || 0) || tEventDisplayName(a).localeCompare(tEventDisplayName(b), undefined, { numeric: true }));
@@ -1661,9 +1702,9 @@ function App() {
     return events
       .filter((event) => (Array.isArray(event.lanePlan) && event.lanePlan.length) || (eventRegistrations.get(event.id) || []).some((registration) => Number(registration.laneNumber || 0) > 0))
       .sort((a, b) => Number(a.no || 0) - Number(b.no || 0) || tEventDisplayName(a).localeCompare(tEventDisplayName(b), undefined, { numeric: true }));
-  }, [activeTab, eventRegistrations, events, language, liveSummary?.laneGroups]);
+  }, [activeTab, eventRegistrations, events, language, liveSummary?.laneGroups, summarySupportsOnDemandViews]);
   const laneGroups = useMemo(() => (
-    activeTab === 'lanes' && Array.isArray(liveSummary?.laneGroups)
+    activeTab === 'lanes' && summarySupportsOnDemandViews
       ? (laneEventFilter ? liveSummary.laneGroups.filter((group) => group.id === laneEventFilter) : [])
       : laneEventOptions
       .filter((event) => !laneEventFilter || event.id === laneEventFilter)
@@ -1688,7 +1729,7 @@ function App() {
         };
       })
       .filter((group) => group.rows.length)
-  ), [activeTab, eventRegistrations, laneEventFilter, laneEventOptions, liveSummary?.laneGroups]);
+  ), [activeTab, eventRegistrations, laneEventFilter, laneEventOptions, liveSummary?.laneGroups, summarySupportsOnDemandViews]);
   const fullAthleteLeaders = useMemo(() => {
     const athletes = new Map();
     registrations.forEach((registration) => {
@@ -2878,7 +2919,7 @@ function App() {
               </button>
               <label>
                 {t('search')}
-                <input disabled={!studentYearFilter} value={studentQuery} onChange={(event) => setStudentQuery(event.target.value)} placeholder={`${t('name')}, ${t('chineseName')}, ${t('class')}, ${t('gender')}, ${t('house')}`} />
+                <input value={studentQuery} onChange={(event) => setStudentQuery(event.target.value)} placeholder={`${t('name')}, ${t('chineseName')}, ${t('class')}, ${t('gender')}, ${t('house')}`} />
               </label>
               <div className="student-filter-grid">
                 <label>
