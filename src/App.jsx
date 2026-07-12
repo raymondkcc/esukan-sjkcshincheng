@@ -1468,6 +1468,10 @@ function App() {
 
   const canonicalStudents = useMemo(() => buildCanonicalStudentMap(students), [students]);
   const resolveStudent = (student) => resolveCanonicalStudent(student, canonicalStudents);
+  const visibleStudents = useMemo(() => students.filter((student) => {
+    const canonicalStudent = resolveCanonicalStudent(student, canonicalStudents);
+    return getStudentKey(canonicalStudent) === getStudentKey(student);
+  }), [canonicalStudents, students]);
   const studentMap = useMemo(() => new Map(students.map((student) => [
     getStudentKey(student),
     resolveCanonicalStudent(student, canonicalStudents),
@@ -1513,19 +1517,19 @@ function App() {
   });
   const registeredStudentSet = new Set(registrationsForRegisterEvent.map((item) => item.studentIc));
   const studentClassOptions = useMemo(() => (
-    Array.from(new Set(students.map((student) => String(student.className || '').trim()).filter(Boolean)))
+    Array.from(new Set(visibleStudents.map((student) => String(student.className || '').trim()).filter(Boolean)))
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-  ), [students]);
+  ), [visibleStudents]);
   const studentGenderOptions = useMemo(() => (
-    Array.from(new Set(students.map((student) => String(student.gender || '').trim()).filter(Boolean)))
+    Array.from(new Set(visibleStudents.map((student) => String(student.gender || '').trim()).filter(Boolean)))
       .sort((a, b) => a.localeCompare(b))
-  ), [students]);
+  ), [visibleStudents]);
   const studentHouseOptions = useMemo(() => (
-    Array.from(new Set(students.map((student) => normalizeHouse(student.house)).filter(Boolean)))
+    Array.from(new Set(visibleStudents.map((student) => normalizeHouse(student.house)).filter(Boolean)))
       .sort(compareHouses)
-  ), [students]);
+  ), [visibleStudents]);
 
-  const filteredStudents = (studentYearFilter ? students : []).filter((student) => {
+  const filteredStudents = (studentYearFilter ? visibleStudents : []).filter((student) => {
     const query = studentQuery.trim().toLowerCase();
     const matchesQuery = !query || [student.name, student.chineseName, student.className, student.gender, student.house].some((value) =>
       String(value || '').toLowerCase().includes(query),
@@ -1539,7 +1543,7 @@ function App() {
   const registerEligibility = getEventEligibility(registerEvent);
   const registerEffectiveClassFilter = registerEligibility.year ? String(registerEligibility.year) : registerClassFilter;
   const registerEffectiveGenderFilter = registerEligibility.gender || registerGenderFilter;
-  const registerCandidates = registerEvent?.withoutStudent ? [] : students
+  const registerCandidates = registerEvent?.withoutStudent ? [] : visibleStudents
     .filter((student) => {
       const query = registerQuery.trim().toLowerCase();
       const matchesQuery = !query || [student.name, student.chineseName, student.className, student.gender, student.house].some((value) =>
@@ -1587,7 +1591,7 @@ function App() {
       return member ? getStudentKey(studentMap.get(member.studentIc) || member) : '';
     },
   );
-  const relayCandidatesForTeam = (team) => students
+  const relayCandidatesForTeam = (team) => visibleStudents
     .filter((student) => {
       const matchesHouse = isSameHouse(student.house, team.house);
       const matchesYear = !registerEligibility.year || getYear(student.className) === registerEligibility.year;
@@ -2956,7 +2960,7 @@ function App() {
               </div>
               <div className="stats-box">
                 <span>{t('showing')}: <b>{filteredStudents.length}</b></span>
-                <span>{t('total')}: <b>{students.length}</b></span>
+                <span>{t('total')}: <b>{visibleStudents.length}</b></span>
               </div>
               <button
                 className="secondary-button"
