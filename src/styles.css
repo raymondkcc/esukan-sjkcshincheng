@@ -1380,6 +1380,52 @@ td .house {
   border-bottom: 1px solid var(--border);
 }
 
+.relay-team-list {
+  display: grid;
+  gap: 12px;
+}
+
+.relay-team-row {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.relay-team-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.relay-team-head strong {
+  margin-right: auto;
+}
+
+.relay-member-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.relay-member-grid label {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+.relay-member-grid label > span {
+  font-weight: 900;
+  text-align: center;
+}
+
+.relay-member-grid select {
+  min-width: 0;
+}
+
 .registered-top {
   display: flex;
   align-items: flex-start;
@@ -1440,13 +1486,14 @@ td .house {
 }
 
 .slip-paper td:first-child,
-.slip-paper td:nth-child(5) {
+.slip-paper td:nth-child(2),
+.slip-paper td:nth-child(6) {
   text-align: center;
-  width: 84px;
+  width: 68px;
 }
 
 .slip-paper td:last-child {
-  min-width: 140px;
+  min-width: 120px;
   height: 34px;
 }
 
@@ -1713,5 +1760,9 @@ td .house {
   .result-detail-grid,
   .lane-detail-grid {
     align-items: start;
+  }
+
+  .relay-member-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

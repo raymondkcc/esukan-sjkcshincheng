@@ -113,6 +113,7 @@ const DEFAULT_SETTINGS = {
 const SCHOOL_LOGO_PATH = '/logo-sjkc-shin-cheng.png';
 const LIVE_SUMMARY_VERSION = 3;
 const STUDENT_YEARS = [1, 2, 3, 4, 5, 6];
+const DEFAULT_LANE_COUNT = 8;
 const DEFAULT_EVENT_FORM = {
   startNo: 1,
   baseName: '',
@@ -181,6 +182,8 @@ const TEXT = {
     optional: 'Pilihan',
     noResults: 'Belum ada keputusan.',
     noLanes: 'Belum ada susunan lorong.',
+    noAssignedLane: 'Tiada lorong ditetapkan yang kosong untuk rumah',
+    noAvailableLane: 'Tiada lorong kosong untuk acara ini.',
     readonly: 'Baca sahaja',
     completed: 'Siap',
     resultEvents: 'Acara',
@@ -280,6 +283,8 @@ const TEXT = {
     houseOnly: 'Rumah sahaja',
     participants: 'Peserta',
     noStudentRegisterHelp: 'Acara ini tidak memerlukan pendaftaran murid. Semua rumah didaftarkan secara automatik daripada tetapan rumah.',
+    relayMembersRequired: 'Pilih empat murid berbeza untuk pasukan lari berganti-ganti ini.',
+    relayMemberInUse: 'Seorang murid hanya boleh mewakili satu pasukan lari berganti-ganti bagi acara ini.',
     year: 'Tahun',
     allYears: 'Semua tahun',
     eventShowsPrefix: 'Acara ini memaparkan',
@@ -340,6 +345,8 @@ const TEXT = {
     optional: 'Optional',
     noResults: 'No results entered yet.',
     noLanes: 'No lane assignments yet.',
+    noAssignedLane: 'No assigned lane is available for house',
+    noAvailableLane: 'No empty lane is available for this event.',
     readonly: 'Readonly',
     completed: 'Completed',
     resultEvents: 'Events',
@@ -439,6 +446,8 @@ const TEXT = {
     houseOnly: 'House only',
     participants: 'Participants',
     noStudentRegisterHelp: 'This event does not need student registration. All houses are registered automatically from house settings.',
+    relayMembersRequired: 'Choose four different students for this relay team.',
+    relayMemberInUse: 'A student can only join one relay team for this event.',
     year: 'Year',
     allYears: 'All years',
     eventShowsPrefix: 'This event shows',
@@ -499,6 +508,8 @@ const TEXT = {
     optional: '选项',
     noResults: '还没有录入成绩。',
     noLanes: '还没有跑道安排。',
+    noAssignedLane: '该运动组没有可用的指定跑道',
+    noAvailableLane: '此项目没有空跑道。',
     readonly: '只读',
     completed: '已完成',
     resultEvents: '项目',
@@ -598,6 +609,8 @@ const TEXT = {
     houseOnly: '仅运动组',
     participants: '参赛者',
     noStudentRegisterHelp: '此项目不需要学生报名。所有运动组会根据设置自动报名。',
+    relayMembersRequired: '请为这支接力队选择四名不同的学生。',
+    relayMemberInUse: '每名学生只能代表一个接力队参加此项目。',
     year: '年级',
     allYears: '全部年级',
     eventShowsPrefix: '此项目显示',
@@ -658,6 +671,15 @@ const getHouseColorOrder = (house) => {
   const key = houseMatchKey(house);
   const index = HOUSE_COLOR_ORDER.findIndex((tokens) => tokens.some((token) => key.includes(token)));
   return index >= 0 ? index : HOUSE_COLOR_ORDER.length;
+};
+const isSameHouse = (firstHouse, secondHouse) => {
+  const firstKey = houseMatchKey(firstHouse);
+  const secondKey = houseMatchKey(secondHouse);
+  if (!firstKey || !secondKey) return false;
+  if (firstKey === secondKey) return true;
+  const firstIndex = HOUSE_COLOR_ORDER.findIndex((tokens) => tokens.some((token) => firstKey.includes(token)));
+  const secondIndex = HOUSE_COLOR_ORDER.findIndex((tokens) => tokens.some((token) => secondKey.includes(token)));
+  return firstIndex >= 0 && firstIndex === secondIndex;
 };
 const compareHouses = (a, b) => {
   const colorCompare = getHouseColorOrder(a) - getHouseColorOrder(b);
@@ -731,6 +753,10 @@ const displayStudentName = (student, fallback = '') => {
 };
 const isHouseEntry = (registration) => registration?.entryType === 'house';
 const isRelayEntry = (registration) => registration?.entryType === 'relay';
+const isRelayEvent = (event) => {
+  const name = `${event?.name || ''} ${event?.baseName || ''}`;
+  return /4\s*(?:x|×)/i.test(name) || (String(event?.type || '').toLocaleUpperCase('ms-MY').includes('KUMPULAN') && /(RELAY|接力)/i.test(name));
+};
 const getTeamCountPerHouse = (event) => Math.max(1, Math.min(8, Number(event?.teamCountPerHouse || 1) || 1));
 const clampTeamCountPerHouse = (value) => Math.max(1, Math.min(8, Number(value || 1) || 1));
 const getHouseEntryTeamNumber = (registration) => Math.max(1, Number(registration?.teamNumber || 1) || 1);
@@ -1043,6 +1069,7 @@ function App() {
   const [registerHouse, setRegisterHouse] = useState('');
   const [registerClassFilter, setRegisterClassFilter] = useState('');
   const [registerGenderFilter, setRegisterGenderFilter] = useState('');
+  const [relayTeamDrafts, setRelayTeamDrafts] = useState({});
   const [resultEventId, setResultEventId] = useState('');
   const [slipEventId, setSlipEventId] = useState('');
   const [selectedSlipEventIds, setSelectedSlipEventIds] = useState([]);
@@ -1380,6 +1407,46 @@ function App() {
       if (classCompare) return classCompare;
       return String(a.name || '').localeCompare(String(b.name || ''));
     });
+  const relayTeamsForRegisterEvent = useMemo(() => {
+    if (!isRelayEvent(registerEvent)) return [];
+    const lanePlan = Array.isArray(registerEvent.lanePlan) && registerEvent.lanePlan.length
+      ? registerEvent.lanePlan
+      : houses.map((house, index) => ({ laneNumber: index + 1, house }));
+    return lanePlan
+      .map((lane) => ({
+        laneNumber: Number(lane.laneNumber || lane.lane || 0),
+        house: normalizeHouse(lane.house),
+      }))
+      .filter((lane) => lane.laneNumber && lane.house)
+      .sort((a, b) => a.laneNumber - b.laneNumber)
+      .map((lane) => {
+        const studentIc = `relay-${registerEvent.id}-lane-${lane.laneNumber}`;
+        const registration = registrationsForRegisterEvent.find((item) => (
+          isRelayEntry(item) && (Number(item.laneNumber || 0) === lane.laneNumber || item.studentIc === studentIc)
+        ));
+        return {
+          ...lane,
+          studentIc,
+          registration,
+          key: registration?.id || `${registerEvent.id}_${studentIc}`,
+        };
+      });
+  }, [houses, registerEvent, registrationsForRegisterEvent]);
+  const getRelayTeamDraft = (team) => relayTeamDrafts[team.key] || Array.from(
+    { length: 4 },
+    (_, index) => {
+      const member = team.registration?.teamMembers?.[index];
+      return member ? getStudentKey(studentMap.get(member.studentIc) || member) : '';
+    },
+  );
+  const relayCandidatesForTeam = (team) => students
+    .filter((student) => {
+      const matchesHouse = isSameHouse(student.house, team.house);
+      const matchesYear = !registerEligibility.year || getYear(student.className) === registerEligibility.year;
+      const matchesGender = !registerEligibility.gender || String(student.gender || '') === registerEligibility.gender;
+      return matchesHouse && matchesYear && matchesGender;
+    })
+    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
 
   const fullScoreData = useMemo(() => {
     const houseTotals = houses.map((house) => ({ name: house, total: 0 }));
@@ -2118,12 +2185,31 @@ function App() {
       return;
     }
 
+    const lanePlan = Array.isArray(registerEvent.lanePlan) ? registerEvent.lanePlan : [];
+    const houseLanes = lanePlan
+      .map((lane) => ({ ...lane, laneNumber: Number(lane.laneNumber || lane.lane || 0) }))
+      .filter((lane) => lane.laneNumber && isSameHouse(lane.house, student.house))
+      .sort((a, b) => a.laneNumber - b.laneNumber);
+    const occupiedLanes = new Set(registrationsForRegisterEvent.map((registration) => Number(registration.laneNumber || 0)).filter(Boolean));
+    const laneNumber = lanePlan.length
+      ? houseLanes.find((lane) => !occupiedLanes.has(lane.laneNumber))?.laneNumber || 0
+      : Array.from({ length: DEFAULT_LANE_COUNT }, (_, index) => index + 1).find((lane) => !occupiedLanes.has(lane)) || 0;
+    if (lanePlan.length && !laneNumber) {
+      setNotice(`${t('noAssignedLane')} ${student.house}.`);
+      return;
+    }
+    if (!laneNumber) {
+      setNotice(t('noAvailableLane'));
+      return;
+    }
+
     const newRegistration = {
       id,
       eventId: registerEvent.id,
       studentIc: studentKey,
       house: student.house,
       className: student.className,
+      laneNumber,
       position: '',
       points: 0,
       updatedAt: serverTimestamp(),
@@ -2131,6 +2217,63 @@ function App() {
     };
     await setDoc(doc(refs.registrations, id), newRegistration);
     await refreshLiveSummary({ registrations: [...registrations, newRegistration] });
+    setResultEventId(registerEvent.id);
+    setSlipEventId(registerEvent.id);
+  };
+
+  const saveRelayTeam = async (team) => {
+    if (!registerEvent || !isRelayEvent(registerEvent)) return;
+    const memberKeys = getRelayTeamDraft(team);
+    if (memberKeys.length !== 4 || memberKeys.some((key) => !key) || new Set(memberKeys).size !== 4) {
+      setNotice(t('relayMembersRequired'));
+      return;
+    }
+    const members = memberKeys.map((key) => studentMap.get(key)).filter(Boolean);
+    if (members.length !== 4) {
+      setNotice(t('relayMembersRequired'));
+      return;
+    }
+    const selectedKeys = new Set(members.map(getStudentKey));
+    const usedMemberKeys = new Set(
+      registrationsForRegisterEvent
+        .filter((registration) => isRelayEntry(registration) && registration.id !== team.registration?.id)
+        .flatMap((registration) => registration.teamMembers || [])
+        .map((member) => getStudentKey(studentMap.get(member.studentIc) || member)),
+    );
+    if (Array.from(selectedKeys).some((key) => usedMemberKeys.has(key))) {
+      setNotice(t('relayMemberInUse'));
+      return;
+    }
+    const nextRegistration = {
+      id: team.key,
+      eventId: registerEvent.id,
+      entryType: 'relay',
+      studentIc: team.studentIc,
+      laneNumber: team.laneNumber,
+      house: team.house,
+      className: Array.from(new Set(members.map((student) => student.className).filter(Boolean))).join(' / '),
+      teamMembers: members.map((student) => ({
+        name: student.name || '',
+        chineseName: student.chineseName || '',
+        className: student.className || '',
+        studentIc: getStudentKey(student),
+      })),
+      position: team.registration?.position || '',
+      points: Number(team.registration?.points || 0),
+      updatedAt: serverTimestamp(),
+      updatedMs: Date.now(),
+    };
+    await setDoc(doc(refs.registrations, nextRegistration.id), nextRegistration, { merge: true });
+    await refreshLiveSummary({
+      registrations: [
+        ...registrations.filter((registration) => registration.id !== nextRegistration.id),
+        nextRegistration,
+      ],
+    });
+    setRelayTeamDrafts((current) => {
+      const { [team.key]: removed, ...remaining } = current;
+      return remaining;
+    });
     setResultEventId(registerEvent.id);
     setSlipEventId(registerEvent.id);
   };
@@ -2226,6 +2369,7 @@ function App() {
       .map(({ registration, student, participantNo }) => `
         <tr>
           <td>${escapeHtml(participantNo)}</td>
+          <td>${escapeHtml(registration.laneNumber || '-')}</td>
           <td>${escapeHtml(displayEntryName(registration, student, event, t('team'), resolveStudent))}</td>
           <td>${escapeHtml(displayEntryClass(registration, student))}</td>
           <td>${escapeHtml(registration.house || student.house || '')}</td>
@@ -2243,8 +2387,8 @@ function App() {
           <p>${escapeHtml([event.no ? `No. ${event.no}` : '', event.category ? tCategory(event.category) : ''].filter(Boolean).join(' - '))}</p>
         </div>
         <table>
-          <thead><tr><th>${escapeHtml(t('participantNo'))}</th><th>${escapeHtml(t('name'))}</th><th>${escapeHtml(t('class'))}</th><th>${escapeHtml(t('house'))}</th><th>${escapeHtml(`${t('place')} / ${t('position')}`)}</th><th>${escapeHtml(t('record'))}</th></tr></thead>
-          <tbody>${rows || `<tr><td colspan="6">${escapeHtml(t('noRegistered'))}</td></tr>`}</tbody>
+          <thead><tr><th>${escapeHtml(t('participantNo'))}</th><th>${escapeHtml(t('lane'))}</th><th>${escapeHtml(t('name'))}</th><th>${escapeHtml(t('class'))}</th><th>${escapeHtml(t('house'))}</th><th>${escapeHtml(`${t('place')} / ${t('position')}`)}</th><th>${escapeHtml(t('record'))}</th></tr></thead>
+          <tbody>${rows || `<tr><td colspan="7">${escapeHtml(t('noRegistered'))}</td></tr>`}</tbody>
         </table>
         <div class="signatures">
           <div class="line">${escapeHtml(t('preparedBy'))}</div>
@@ -2281,8 +2425,8 @@ function App() {
             table { width: 100%; border-collapse: collapse; margin-top: 18px; }
             th, td { border: 1px solid #111827; padding: 8px; font-size: 13px; text-align: left; }
             th { background: #f3f4f6; text-transform: uppercase; font-size: 11px; }
-            td:nth-child(1), td:nth-child(5) { text-align: center; width: 72px; }
-            td:nth-child(6) { height: 30px; width: 160px; }
+            td:nth-child(1), td:nth-child(2), td:nth-child(6) { text-align: center; width: 58px; }
+            td:nth-child(7) { height: 30px; width: 132px; }
             .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 54px; }
             .line { border-top: 1px solid #111827; padding-top: 8px; font-size: 12px; font-weight: bold; }
             .slip-page { page-break-after: always; }
@@ -3001,51 +3145,87 @@ function App() {
             </div>
 
             <div className="panel entry-panel">
-              <div className="entry-columns">
-                <div>
-                  <div className="list-title">
-                    <p className="eyebrow">{registerEvent?.withoutStudent ? t('houseTeams') : t('studentPool')}</p>
-                    <strong>{registerCandidates.length}</strong>
-                  </div>
-                  <div className="student-picker">
-                    {registerCandidates.map((student) => {
-                      const studentKey = getStudentKey(student);
-                      const selected = registeredStudentSet.has(studentKey);
-                      return (
-                        <button className={selected ? 'picker-row selected' : 'picker-row'} key={studentKey} type="button" onClick={() => toggleRegistration(student)}>
-                          <span>
-                            <strong>{displayStudentName(student)}</strong>
-                            <small>{student.className} - {tGender(student.gender)} - {student.house}</small>
-                          </span>
-                          <b>{selected ? 'IN' : '+'}</b>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div>
-                  <div className="list-title">
-                    <p className="eyebrow">{registerEvent?.withoutStudent ? t('registeredTeams') : t('registeredStudents')}</p>
-                    <strong>{registrationsForRegisterEvent.length}</strong>
-                  </div>
-                  <div className="registered-list">
-                    {registrationsForRegisterEvent.map((registration) => {
-                      const student = studentMap.get(registration.studentIc) || {};
-                      return (
-                        <div className="registered-row" key={registration.id}>
-                          <div className="registered-top">
-                            <div>
-                              <strong>{displayEntryName(registration, student, registerEvent, t('team'), resolveStudent)}</strong>
-                              {!isHouseEntry(registration) && <small>{`${displayEntryClass(registration, student)} - ${tGender(student.gender)} - ${registration.house}`}</small>}
-                            </div>
-                            {!registerEvent?.withoutStudent && <button className="position clear" type="button" onClick={() => toggleRegistration({ ...student, ic: registration.studentIc })}>{t('remove')}</button>}
-                          </div>
+              {isRelayEvent(registerEvent) ? (
+                <div className="relay-team-list">
+                  {relayTeamsForRegisterEvent.map((team) => {
+                    const draft = getRelayTeamDraft(team);
+                    const candidates = relayCandidatesForTeam(team);
+                    return (
+                      <div className="relay-team-row" key={team.key}>
+                        <div className="relay-team-head">
+                          <span className={houseClassName(team.house)}>{team.house}</span>
+                          <strong>{t('lane')} {team.laneNumber}</strong>
+                          <button className="small-button" type="button" onClick={() => saveRelayTeam(team)}>{t('save')}</button>
                         </div>
-                      );
-                    })}
+                        <div className="relay-member-grid">
+                          {draft.map((studentKey, index) => (
+                            <label key={`${team.key}-${index}`}>
+                              <span>{index + 1}</span>
+                              <select value={studentKey} onChange={(event) => {
+                                const nextDraft = [...draft];
+                                nextDraft[index] = event.target.value;
+                                setRelayTeamDrafts((current) => ({ ...current, [team.key]: nextDraft }));
+                              }}>
+                                <option value="">{t('choose')}</option>
+                                {candidates.map((student) => {
+                                  const candidateKey = getStudentKey(student);
+                                  return <option key={candidateKey} value={candidateKey}>{displayStudentName(student)} ({student.className})</option>;
+                                })}
+                              </select>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="entry-columns">
+                  <div>
+                    <div className="list-title">
+                      <p className="eyebrow">{registerEvent?.withoutStudent ? t('houseTeams') : t('studentPool')}</p>
+                      <strong>{registerCandidates.length}</strong>
+                    </div>
+                    <div className="student-picker">
+                      {registerCandidates.map((student) => {
+                        const studentKey = getStudentKey(student);
+                        const selected = registeredStudentSet.has(studentKey);
+                        return (
+                          <button className={selected ? 'picker-row selected' : 'picker-row'} key={studentKey} type="button" onClick={() => toggleRegistration(student)}>
+                            <span>
+                              <strong>{displayStudentName(student)}</strong>
+                              <small>{student.className} - {tGender(student.gender)} - {student.house}</small>
+                            </span>
+                            <b>{selected ? 'IN' : '+'}</b>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="list-title">
+                      <p className="eyebrow">{registerEvent?.withoutStudent ? t('registeredTeams') : t('registeredStudents')}</p>
+                      <strong>{registrationsForRegisterEvent.length}</strong>
+                    </div>
+                    <div className="registered-list">
+                      {registrationsForRegisterEvent.map((registration) => {
+                        const student = studentMap.get(registration.studentIc) || {};
+                        return (
+                          <div className="registered-row" key={registration.id}>
+                            <div className="registered-top">
+                              <div>
+                                <strong>{displayEntryName(registration, student, registerEvent, t('team'), resolveStudent)}</strong>
+                                {!isHouseEntry(registration) && <small>{`${displayEntryClass(registration, student)} - ${tGender(student.gender)} - ${registration.house}`}</small>}
+                              </div>
+                              {!registerEvent?.withoutStudent && <button className="position clear" type="button" onClick={() => toggleRegistration({ ...student, ic: registration.studentIc })}>{t('remove')}</button>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </section>
         )}
@@ -3200,12 +3380,13 @@ function App() {
             <div className="panel registered-list result-entry-list">
               {registrationsForResultEvent.map((registration) => {
                 const student = studentMap.get(registration.studentIc) || {};
+                const relayResult = isRelayEvent(resultEvent) && isRelayEntry(registration);
                 return (
                   <div className="registered-row" key={registration.id}>
                     <div className="registered-top">
                       <div>
-                        <strong>{displayEntryName(registration, student, resultEvent, t('team'), resolveStudent)}</strong>
-                        {!isHouseEntry(registration) && <small>{`${displayEntryClass(registration, student)} - ${tGender(student.gender)} - ${registration.house}`}</small>}
+                        <strong>{relayResult ? `${registration.house || '-'}${registration.laneNumber ? ` - ${t('lane')} ${registration.laneNumber}` : ''}` : displayEntryName(registration, student, resultEvent, t('team'), resolveStudent)}</strong>
+                        {!relayResult && !isHouseEntry(registration) && <small>{`${displayEntryClass(registration, student)} - ${tGender(student.gender)} - ${registration.house}`}</small>}
                       </div>
                       <b>{registration.points || 0}</b>
                     </div>
@@ -3273,13 +3454,14 @@ function App() {
                 <h3>{slipEvent ? tEventDisplayName(slipEvent) : t('chooseEvent')}</h3>
                 {slipEvent && <p className="slip-meta">{[slipEvent.no ? `No. ${slipEvent.no}` : '', slipEvent.category ? tCategory(slipEvent.category) : ''].filter(Boolean).join(' - ')}</p>}
                 <table>
-                  <thead><tr><th>{t('participantNo')}</th><th>{t('name')}</th><th>{t('class')}</th><th>{t('house')}</th><th>{t('place')} / {t('position')}</th><th>{t('record')}</th></tr></thead>
+                  <thead><tr><th>{t('participantNo')}</th><th>{t('lane')}</th><th>{t('name')}</th><th>{t('class')}</th><th>{t('house')}</th><th>{t('place')} / {t('position')}</th><th>{t('record')}</th></tr></thead>
                   <tbody>
                     {jurySheetRows.length ? jurySheetRows
                       .map(({ registration, student, participantNo }) => {
                         return (
                           <tr key={registration.id}>
                             <td>{participantNo}</td>
+                            <td>{registration.laneNumber || '-'}</td>
                             <td>{displayEntryName(registration, student, slipEvent, t('team'), resolveStudent)}</td>
                             <td>{displayEntryClass(registration, student)}</td>
                             <td>{registration.house || student.house}</td>
