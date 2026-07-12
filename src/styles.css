@@ -427,14 +427,68 @@ button {
 
 .notice {
   position: fixed;
-  left: 50%;
-  bottom: 22px;
-  z-index: 40;
-  transform: translateX(-50%);
+  top: max(16px, env(safe-area-inset-top));
+  right: clamp(14px, 2vw, 28px);
+  z-index: 50;
+  width: min(420px, calc(100vw - 28px));
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
   color: #ffffff;
   background: #172033;
   border-color: #172033;
   box-shadow: var(--shadow);
+  text-align: left;
+  animation: noticeIn 180ms ease-out;
+}
+
+.notice span,
+.notice strong,
+.notice small {
+  min-width: 0;
+  display: block;
+}
+
+.notice strong {
+  font-size: 0.84rem;
+}
+
+.notice small {
+  margin-top: 2px;
+  color: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.notice-success {
+  background: #047857;
+  border-color: #047857;
+}
+
+.notice-error {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.notice-info {
+  background: #172033;
+  border-color: #172033;
+}
+
+@keyframes noticeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .panel {
@@ -1719,6 +1773,11 @@ td .house {
 @media (max-width: 720px) {
   .workspace {
     padding-inline: 10px;
+  }
+
+  .notice {
+    right: 10px;
+    width: calc(100vw - 20px);
   }
 
   .topbar {

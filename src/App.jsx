@@ -17,6 +17,8 @@ import {
 import {
   Activity,
   ClipboardList,
+  CircleAlert,
+  CircleCheck,
   ChevronDown,
   Download,
   FileSpreadsheet,
@@ -183,6 +185,27 @@ const TEXT = {
     latest: 'Terkini',
     pinnedEvents: 'Acara dipinkan',
     savePinnedEvents: 'Simpan acara dipinkan',
+    noticeSuccess: 'Berjaya',
+    noticeInfo: 'Makluman',
+    noticeError: 'Ralat',
+    settingsSaved: 'Tetapan berjaya disimpan.',
+    eventsCreated: 'acara berjaya dicipta.',
+    houseEventsCreated: 'acara rumah berjaya dicipta.',
+    templateDownloaded: 'Templat Excel berjaya dimuat turun.',
+    studentsImported: 'murid berjaya diimport.',
+    studentUpdated: 'Maklumat murid berjaya dikemas kini.',
+    studentDeleted: 'Murid berjaya dipadam.',
+    studentRegistered: 'Murid berjaya didaftarkan.',
+    studentUnregistered: 'Pendaftaran murid berjaya dibatalkan.',
+    relayTeamSaved: 'Pasukan lari berganti-ganti berjaya disimpan.',
+    resultSaved: 'Keputusan berjaya disimpan.',
+    eventUpdated: 'Acara berjaya dikemas kini.',
+    eventDeleted: 'Acara berjaya dipadam.',
+    printOpened: 'Tetingkap cetakan telah dibuka.',
+    printWindowBlocked: 'Tetingkap cetakan tidak dapat dibuka. Benarkan pop-up dan cuba lagi.',
+    teacherViewEnabled: 'Paparan guru telah dibuka.',
+    adminViewEnabled: 'Paparan admin telah dibuka.',
+    liveViewEnabled: 'Paparan langsung telah dibuka.',
     results: 'Keputusan',
     classMarks: 'Markah Kelas',
     optional: 'Pilihan',
@@ -348,6 +371,27 @@ const TEXT = {
     latest: 'Latest',
     pinnedEvents: 'Pinned events',
     savePinnedEvents: 'Save pinned events',
+    noticeSuccess: 'Success',
+    noticeInfo: 'Notice',
+    noticeError: 'Error',
+    settingsSaved: 'Settings saved.',
+    eventsCreated: 'events created.',
+    houseEventsCreated: 'house events created.',
+    templateDownloaded: 'Excel template downloaded.',
+    studentsImported: 'students imported.',
+    studentUpdated: 'Student updated.',
+    studentDeleted: 'Student deleted.',
+    studentRegistered: 'Student registered.',
+    studentUnregistered: 'Student registration removed.',
+    relayTeamSaved: 'Relay team saved.',
+    resultSaved: 'Result saved.',
+    eventUpdated: 'Event updated.',
+    eventDeleted: 'Event deleted.',
+    printOpened: 'Print window opened.',
+    printWindowBlocked: 'Could not open the print window. Allow pop-ups and try again.',
+    teacherViewEnabled: 'Teacher view enabled.',
+    adminViewEnabled: 'Admin view enabled.',
+    liveViewEnabled: 'Live view enabled.',
     results: 'Results',
     classMarks: 'Class Marks',
     optional: 'Optional',
@@ -513,6 +557,27 @@ const TEXT = {
     latest: '最新',
     pinnedEvents: '置顶项目',
     savePinnedEvents: '保存置顶项目',
+    noticeSuccess: '操作成功',
+    noticeInfo: '提示',
+    noticeError: '错误',
+    settingsSaved: '设置已保存。',
+    eventsCreated: '个项目已创建。',
+    houseEventsCreated: '个运动组项目已创建。',
+    templateDownloaded: 'Excel 模板已下载。',
+    studentsImported: '名学生已导入。',
+    studentUpdated: '学生资料已更新。',
+    studentDeleted: '学生已删除。',
+    studentRegistered: '学生已报名。',
+    studentUnregistered: '学生报名已取消。',
+    relayTeamSaved: '接力队伍已保存。',
+    resultSaved: '成绩已保存。',
+    eventUpdated: '项目已更新。',
+    eventDeleted: '项目已删除。',
+    printOpened: '打印窗口已打开。',
+    printWindowBlocked: '无法打开打印窗口。请允许弹出窗口后再试。',
+    teacherViewEnabled: '教师页面已打开。',
+    adminViewEnabled: '管理员页面已打开。',
+    liveViewEnabled: '即时页面已打开。',
     results: '成绩',
     classMarks: '班级分数',
     optional: '选项',
@@ -1221,7 +1286,7 @@ function App() {
   const [isLiveBoardFullscreen, setIsLiveBoardFullscreen] = useState(false);
   const [loadedSections, setLoadedSections] = useState({ settings: false, liveSummary: false, students: false, events: false, registrations: false });
   const [uploadingStudents, setUploadingStudents] = useState(false);
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState(null);
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [liveSummary, setLiveSummary] = useState(null);
   const [students, setStudents] = useState([]);
@@ -1293,6 +1358,10 @@ function App() {
   const nextEventNo = useMemo(() => Math.max(0, ...events.map((event) => Number(event.no || 0))) + 1, [events]);
   const currentLanguage = LANGUAGE_OPTIONS.find((item) => item.id === language) || LANGUAGE_OPTIONS[0];
   const t = (key) => TEXT[language]?.[key] || TEXT.ms[key] || key;
+  const showNotice = (message, tone = 'info') => {
+    setNotice({ id: Date.now(), message, tone });
+  };
+  const showSuccess = (message) => showNotice(message, 'success');
   const tGender = (value) => {
     const key = normalizeGender(value);
     if (key === 'Lelaki') return t('male');
@@ -1416,7 +1485,7 @@ function App() {
   const handleSnapshotError = (key, error) => {
     console.error(error);
     markLoaded(key);
-    setNotice(`Could not load ${key}: ${error.message || 'Firebase error'}`);
+    showNotice(`Could not load ${key}: ${error.message || 'Firebase error'}`, 'error');
   };
 
   useEffect(() => {
@@ -1496,7 +1565,7 @@ function App() {
 
   useEffect(() => {
     if (!notice) return undefined;
-    const timer = window.setTimeout(() => setNotice(''), 3600);
+    const timer = window.setTimeout(() => setNotice(null), 4200);
     return () => window.clearTimeout(timer);
   }, [notice]);
 
@@ -1876,7 +1945,7 @@ function App() {
       await setDoc(refs.liveSummary, { ...summary, updatedAt: serverTimestamp() }, { merge: true });
     } catch (error) {
       console.error(error);
-      setNotice(`Saved, but live board summary did not refresh: ${error.message || 'Firebase error'}`);
+      showNotice(`Saved, but live board summary did not refresh: ${error.message || 'Firebase error'}`, 'error');
     }
   };
 
@@ -1903,20 +1972,20 @@ function App() {
 
   const saveSettings = async () => {
     if (accessRole === 'user') {
-      setNotice('Staff access required.');
+      showNotice('Staff access required.', 'error');
       return;
     }
     const payload = { ...settings, houses };
     const { updatedAt, ...settingsForSignature } = payload;
     const settingsSignature = JSON.stringify(settingsForSignature);
     if (settingsSignature === savedSettingsRef.current) {
-      setNotice('Settings unchanged.');
+      showNotice('Settings unchanged.');
       return;
     }
     await setDoc(refs.settings, { ...payload, updatedAt: serverTimestamp() }, { merge: true });
     if (hasFullDataSnapshot) await refreshLiveSummary({ settings: payload, houses: payload.houses });
     savedSettingsRef.current = settingsSignature;
-    setNotice('Settings saved.');
+    showSuccess(t('settingsSaved'));
   };
 
   const updatePinnedLiveEvent = (slot, eventId) => {
@@ -1956,7 +2025,7 @@ function App() {
   const saveBulkEvents = async (submitEvent) => {
     submitEvent.preventDefault();
     if (accessRole === 'user') {
-      setNotice('Staff access required.');
+      showNotice('Staff access required.', 'error');
       return;
     }
     const baseName = eventForm.baseName.trim();
@@ -2022,7 +2091,7 @@ function App() {
     setResultEventId(`${timestamp}-0-${slugify(buildEventName(baseName, sortedCategories[0]))}`);
     setSlipEventId(`${timestamp}-0-${slugify(buildEventName(baseName, sortedCategories[0]))}`);
     setEventForm((current) => ({ ...DEFAULT_EVENT_FORM, startNo: Number(current.startNo || 1) + sortedCategories.length }));
-    setNotice(withoutStudent ? `${sortedCategories.length} house events created with ${teamCountPerHouse} team(s) per house.` : `${sortedCategories.length} events created.`);
+    showSuccess(`${sortedCategories.length} ${t(withoutStudent ? 'houseEventsCreated' : 'eventsCreated')}`);
   };
 
   const downloadTemplate = async () => {
@@ -2035,17 +2104,18 @@ function App() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Student Namelist');
     XLSX.writeFile(workbook, `e-sukan-template-${settings.year}.xlsx`);
+    showSuccess(t('templateDownloaded'));
   };
 
   const importStudents = async (file) => {
     if (!file) return;
     if (accessRole === 'user') {
-      setNotice('Staff access required.');
+      showNotice('Staff access required.', 'error');
       return;
     }
 
     setUploadingStudents(true);
-    setNotice(`Uploading ${file.name}...`);
+    showNotice(`Uploading ${file.name}...`);
     try {
       const XLSX = await import('xlsx');
       const workbook = XLSX.read(await file.arrayBuffer());
@@ -2070,7 +2140,7 @@ function App() {
         .filter((student) => student.studentKey && student.name && student.className && student.house && student.gender);
 
       if (!validStudents.length) {
-        setNotice('No valid rows. Required columns: Name, Kelas, Rumah Sukan / House, Jantina/Gender.');
+        showNotice('No valid rows. Required columns: Name, Kelas, Rumah Sukan / House, Jantina/Gender.', 'error');
         return;
       }
 
@@ -2112,10 +2182,10 @@ function App() {
       if (hasFullDataSnapshot) {
         await refreshLiveSummary({ settings: nextSettings, houses: nextSettings.houses, students: Array.from(nextStudentMap.values()) });
       }
-      setNotice(`${validStudents.length} students imported. Houses updated from template.`);
+      showSuccess(`${validStudents.length} ${t('studentsImported')}`);
     } catch (error) {
       console.error(error);
-      setNotice(`Upload failed: ${error.message || 'Please check the file and Firebase permissions.'}`);
+      showNotice(`Upload failed: ${error.message || 'Please check the file and Firebase permissions.'}`, 'error');
     } finally {
       setUploadingStudents(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -2140,7 +2210,7 @@ function App() {
 
   const saveStudentEdit = async (student) => {
     if (accessRole === 'user') {
-      setNotice('Staff access required.');
+      showNotice('Staff access required.', 'error');
       return;
     }
     const studentKey = getStudentKey(student);
@@ -2156,7 +2226,7 @@ function App() {
       updatedAt: serverTimestamp(),
     };
     if (!payload.name || !payload.className || !payload.gender || !payload.house) {
-      setNotice('Name, class, gender, and house are required.');
+      showNotice('Name, class, gender, and house are required.', 'error');
       return;
     }
     const registrationRows = hasFullDataSnapshot
@@ -2188,12 +2258,12 @@ function App() {
       });
     }
     cancelStudentEdit();
-    setNotice('Student updated.');
+    showSuccess(t('studentUpdated'));
   };
 
   const deleteStudent = async (student) => {
     if (accessRole === 'user') {
-      setNotice('Staff access required.');
+      showNotice('Staff access required.', 'error');
       return;
     }
     const studentKey = getStudentKey(student);
@@ -2218,7 +2288,7 @@ function App() {
       });
     }
     if (editingStudentKey === studentKey) cancelStudentEdit();
-    setNotice('Student deleted.');
+    showSuccess(t('studentDeleted'));
   };
 
   const startEventEdit = (event) => {
@@ -2246,7 +2316,7 @@ function App() {
 
   const saveEventEdit = async (event) => {
     if (accessRole === 'user') {
-      setNotice('Staff access required.');
+      showNotice('Staff access required.', 'error');
       return;
     }
     if (!eventEditForm) return;
@@ -2269,7 +2339,7 @@ function App() {
       updatedAt: serverTimestamp(),
     };
     if (!payload.name || !payload.category) {
-      setNotice('Event name and category are required.');
+      showNotice('Event name and category are required.', 'error');
       return;
     }
     const batch = writeBatch(db);
@@ -2331,7 +2401,7 @@ function App() {
       ],
     });
     cancelEventEdit();
-    setNotice('Event updated.');
+    showSuccess(t('eventUpdated'));
   };
 
   const getRegistrationBlockReason = (event, eventList, student) => {
@@ -2382,33 +2452,34 @@ function App() {
 
   const toggleRegistration = async (student) => {
     if (accessRole === 'user') {
-      setNotice('Staff access required.');
+      showNotice('Staff access required.', 'error');
       return;
     }
     if (!registerEvent) {
-      setNotice('Choose an event first.');
+      showNotice('Choose an event first.', 'error');
       return;
     }
     if (registerEvent.withoutStudent) {
-      setNotice('This event registers houses automatically.');
+      showNotice('This event registers houses automatically.');
       return;
     }
 
     const studentKey = getStudentKey(student);
     if (!studentKey) {
-      setNotice('Student record is missing its generated key.');
+      showNotice('Student record is missing its generated key.', 'error');
       return;
     }
     const id = `${registerEvent.id}_${studentKey}`;
     if (registeredStudentSet.has(studentKey)) {
       await deleteDoc(doc(refs.registrations, id));
       await refreshLiveSummary({ registrations: registrations.filter((registration) => registration.id !== id) });
+      showSuccess(t('studentUnregistered'));
       return;
     }
 
     const blockReason = getRegistrationBlockReason(registerEvent, registrationsForRegisterEvent, student);
     if (blockReason) {
-      setNotice(blockReason);
+      showNotice(blockReason, 'error');
       return;
     }
 
@@ -2422,11 +2493,11 @@ function App() {
       ? houseLanes.find((lane) => !occupiedLanes.has(lane.laneNumber))?.laneNumber || 0
       : Array.from({ length: DEFAULT_LANE_COUNT }, (_, index) => index + 1).find((lane) => !occupiedLanes.has(lane)) || 0;
     if (lanePlan.length && !laneNumber) {
-      setNotice(`${t('noAssignedLane')} ${student.house}.`);
+      showNotice(`${t('noAssignedLane')} ${student.house}.`, 'error');
       return;
     }
     if (!laneNumber) {
-      setNotice(t('noAvailableLane'));
+      showNotice(t('noAvailableLane'), 'error');
       return;
     }
 
@@ -2446,18 +2517,19 @@ function App() {
     await refreshLiveSummary({ registrations: [...registrations, newRegistration] });
     setResultEventId(registerEvent.id);
     setSlipEventId(registerEvent.id);
+    showSuccess(t('studentRegistered'));
   };
 
   const saveRelayTeam = async (team) => {
     if (!registerEvent || !isRelayEvent(registerEvent)) return;
     const memberKeys = getRelayTeamDraft(team);
     if (memberKeys.length !== 4 || memberKeys.some((key) => !key) || new Set(memberKeys).size !== 4) {
-      setNotice(t('relayMembersRequired'));
+      showNotice(t('relayMembersRequired'), 'error');
       return;
     }
     const members = memberKeys.map((key) => studentMap.get(key)).filter(Boolean);
     if (members.length !== 4) {
-      setNotice(t('relayMembersRequired'));
+      showNotice(t('relayMembersRequired'), 'error');
       return;
     }
     const selectedKeys = new Set(members.map(getStudentKey));
@@ -2468,7 +2540,7 @@ function App() {
         .map((member) => getStudentKey(studentMap.get(member.studentIc) || member)),
     );
     if (Array.from(selectedKeys).some((key) => usedMemberKeys.has(key))) {
-      setNotice(t('relayMemberInUse'));
+      showNotice(t('relayMemberInUse'), 'error');
       return;
     }
     const nextRegistration = {
@@ -2503,11 +2575,12 @@ function App() {
     });
     setResultEventId(registerEvent.id);
     setSlipEventId(registerEvent.id);
+    showSuccess(t('relayTeamSaved'));
   };
 
   const updateResult = async (registration, position) => {
     if (accessRole !== 'admin') {
-      setNotice('Admin access required.');
+      showNotice('Admin access required.', 'error');
       return;
     }
     const event = eventMap.get(registration.eventId);
@@ -2525,11 +2598,12 @@ function App() {
         item.id === registration.id ? { ...item, position: nextPosition, points, updatedMs } : item
       )),
     });
+    showSuccess(t('resultSaved'));
   };
 
   const deleteEvent = async (eventId) => {
     if (accessRole === 'user') {
-      setNotice('Staff access required.');
+      showNotice('Staff access required.', 'error');
       return;
     }
     const event = eventMap.get(eventId);
@@ -2546,7 +2620,7 @@ function App() {
       registrations: registrations.filter((registration) => registration.eventId !== eventId),
     });
     if (editingEventId === eventId) cancelEventEdit();
-    setNotice('Event deleted.');
+    showSuccess(t('eventDeleted'));
   };
 
   const toggleFullscreen = async () => {
@@ -2627,17 +2701,20 @@ function App() {
 
   const printResultSlips = (eventIds) => {
     if (accessRole === 'user') {
-      setNotice('Staff access required.');
+      showNotice('Staff access required.', 'error');
       return;
     }
     const printEvents = eventIds.map((eventId) => eventMap.get(eventId)).filter(Boolean);
     if (!printEvents.length) {
-      setNotice('Choose an event first.');
+      showNotice('Choose an event first.', 'error');
       return;
     }
 
     const printWindow = window.open('', '_blank', 'width=900,height=700');
-    if (!printWindow) return;
+    if (!printWindow) {
+      showNotice(t('printWindowBlocked'), 'error');
+      return;
+    }
     printWindow.document.write(`
       <html>
         <head>
@@ -2668,6 +2745,7 @@ function App() {
       </html>
     `);
     printWindow.document.close();
+    showSuccess(t('printOpened'));
   };
 
   const printResultSlip = () => printResultSlips([slipEventId]);
@@ -2692,14 +2770,14 @@ function App() {
       setAccessRole('teacher');
       setLoginMode('');
       setActiveTab('students');
-      setNotice('Teacher view enabled.');
+      showSuccess(t('teacherViewEnabled'));
       return;
     }
     if (loginMode === 'admin' && password === ADMIN_PASSWORD) {
       setAccessRole('admin');
       setLoginMode('');
       setActiveTab('students');
-      setNotice('Admin view enabled.');
+      showSuccess(t('adminViewEnabled'));
       return;
     }
     setAccessError('Wrong password.');
@@ -2711,7 +2789,32 @@ function App() {
     setAccessPassword('');
     setAccessError('');
     setActiveTab('live');
-    setNotice('Live view enabled.');
+    showSuccess(t('liveViewEnabled'));
+  };
+
+  const renderNotice = () => {
+    if (!notice) return null;
+    const message = typeof notice === 'string' ? notice : notice.message;
+    const tone = typeof notice === 'string' ? 'info' : notice.tone || 'info';
+    const Icon = tone === 'success' ? CircleCheck : tone === 'error' ? CircleAlert : Activity;
+    const heading = tone === 'success' ? t('noticeSuccess') : tone === 'error' ? t('noticeError') : t('noticeInfo');
+    return (
+      <button
+        className={`notice notice-${tone}`}
+        type="button"
+        onClick={() => setNotice(null)}
+        role={tone === 'error' ? 'alert' : 'status'}
+        aria-live={tone === 'error' ? 'assertive' : 'polite'}
+        aria-label={`${heading}: ${message}`}
+      >
+        <Icon size={20} aria-hidden="true" />
+        <span>
+          <strong>{heading}</strong>
+          <small>{message}</small>
+        </span>
+        <X size={18} aria-hidden="true" />
+      </button>
+    );
   };
 
   if (!hasFirebaseConfig) {
@@ -2738,7 +2841,7 @@ function App() {
             <p className="help-text">{t('loadingHelp')}</p>
           </section>
         </main>
-        {notice && <button className="notice" type="button" onClick={() => setNotice('')}>{notice}</button>}
+        {renderNotice()}
       </div>
     );
   }
@@ -2811,7 +2914,7 @@ function App() {
         </div>
       )}
 
-      {notice && <button className="notice" type="button" onClick={() => setNotice('')}>{notice}</button>}
+      {renderNotice()}
       {uploadingStudents && (
         <div className="upload-overlay" role="status" aria-live="polite">
           <div className="upload-card">
