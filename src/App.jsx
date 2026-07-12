@@ -112,7 +112,7 @@ const DEFAULT_SETTINGS = {
   maxTarikTaliPerHouseYear: 4,
 };
 const SCHOOL_LOGO_PATH = '/logo-sjkc-shin-cheng.png';
-const LIVE_SUMMARY_VERSION = 3;
+const LIVE_SUMMARY_VERSION = 4;
 const STUDENT_YEARS = [1, 2, 3, 4, 5, 6];
 const DEFAULT_LANE_COUNT = 8;
 const DEFAULT_EVENT_FORM = {
@@ -696,6 +696,47 @@ const isSameHouse = (firstHouse, secondHouse) => {
   const secondIndex = HOUSE_COLOR_ORDER.findIndex((tokens) => tokens.some((token) => secondKey.includes(token)));
   return firstIndex >= 0 && firstIndex === secondIndex;
 };
+const resolveLaneAssignments = (event, registrations = []) => {
+  const hasLanePlan = Array.isArray(event?.lanePlan) && event.lanePlan.length > 0;
+  const lanes = hasLanePlan
+    ? event.lanePlan
+      .map((lane) => ({ laneNumber: Number(lane.laneNumber || lane.lane || 0), house: normalizeHouse(lane.house) }))
+      .filter((lane) => lane.laneNumber)
+    : [];
+  const registrationsByLane = new Map();
+  const unassigned = [];
+
+  registrations.forEach((registration) => {
+    const laneNumber = Number(registration.laneNumber || 0);
+    const knownLane = !hasLanePlan || lanes.some((lane) => lane.laneNumber === laneNumber);
+    if (laneNumber && knownLane && !registrationsByLane.has(laneNumber)) {
+      registrationsByLane.set(laneNumber, registration);
+      if (!hasLanePlan) lanes.push({ laneNumber, house: normalizeHouse(registration.house) });
+      return;
+    }
+    unassigned.push(registration);
+  });
+
+  unassigned.forEach((registration) => {
+    const lane = hasLanePlan
+      ? lanes.find((candidate) => !registrationsByLane.has(candidate.laneNumber) && isSameHouse(candidate.house, registration.house))
+      : (() => {
+        const laneNumber = Array.from({ length: DEFAULT_LANE_COUNT }, (_, index) => index + 1)
+          .find((candidate) => !registrationsByLane.has(candidate));
+        return laneNumber ? { laneNumber, house: normalizeHouse(registration.house) } : null;
+      })();
+    if (!lane) return;
+    registrationsByLane.set(lane.laneNumber, { ...registration, laneNumber: lane.laneNumber });
+    if (!hasLanePlan) lanes.push(lane);
+  });
+
+  return {
+    lanes: lanes
+      .filter((lane, index, all) => all.findIndex((candidate) => candidate.laneNumber === lane.laneNumber) === index)
+      .sort((a, b) => a.laneNumber - b.laneNumber || compareHouses(a.house, b.house)),
+    registrationsByLane,
+  };
+};
 const compareHouses = (a, b) => {
   const colorCompare = getHouseColorOrder(a) - getHouseColorOrder(b);
   if (colorCompare) return colorCompare;
@@ -1025,14 +1066,10 @@ const buildLiveSummary = ({ houses, events, registrations, students }) => {
   });
   const laneGroups = events.map((event) => {
     const eventRegistrations = registrationsByEvent.get(event.id) || [];
-    const laneRegistrations = eventRegistrations.filter((registration) => Number(registration.laneNumber || 0) > 0);
-    const registrationsByLane = new Map(laneRegistrations.map((registration) => [Number(registration.laneNumber), registration]));
-    const lanePlan = Array.isArray(event.lanePlan) && event.lanePlan.length
-      ? event.lanePlan
-      : laneRegistrations.map((registration) => ({ laneNumber: Number(registration.laneNumber), house: registration.house }));
-    const rows = lanePlan
+    const { lanes, registrationsByLane } = resolveLaneAssignments(event, eventRegistrations);
+    const rows = lanes
       .map((lane) => {
-        const laneNumber = Number(lane.laneNumber || lane.lane || 0);
+        const laneNumber = Number(lane.laneNumber || 0);
         const registration = registrationsByLane.get(laneNumber);
         const student = registration ? (studentMap.get(registration.studentIc) || {}) : {};
         return {
@@ -1416,7 +1453,12 @@ function App() {
   const registrationsForRegisterEvent = eventRegistrations.get(registerEventId) || [];
   const registrationsForResultEvent = eventRegistrations.get(resultEventId) || [];
   const registrationsForSlipEvent = eventRegistrations.get(slipEventId) || [];
-  const sortedSlipRegistrations = [...registrationsForSlipEvent].sort((a, b) => {
+  const withResolvedLanes = (event, eventRows) => {
+    const { registrationsByLane } = resolveLaneAssignments(event, eventRows);
+    const assignmentsById = new Map(Array.from(registrationsByLane.values()).map((registration) => [registration.id, registration]));
+    return eventRows.map((registration) => assignmentsById.get(registration.id) || registration);
+  };
+  const sortedSlipRegistrations = [...withResolvedLanes(slipEvent, registrationsForSlipEvent)].sort((a, b) => {
     const positionA = Number(a.position || 99);
     const positionB = Number(b.position || 99);
     if (positionA !== positionB) return positionA - positionB;
@@ -1626,18 +1668,13 @@ function App() {
       : laneEventOptions
       .filter((event) => !laneEventFilter || event.id === laneEventFilter)
       .map((event) => {
-        const laneRegistrations = [...(eventRegistrations.get(event.id) || [])]
-          .filter((registration) => Number(registration.laneNumber || 0) > 0);
-        const registrationsByLane = new Map(laneRegistrations.map((registration) => [Number(registration.laneNumber), registration]));
-        const planRows = Array.isArray(event.lanePlan) && event.lanePlan.length
-          ? event.lanePlan
-          : laneRegistrations.map((registration) => ({ laneNumber: Number(registration.laneNumber), house: registration.house }));
+        const { lanes, registrationsByLane } = resolveLaneAssignments(event, eventRegistrations.get(event.id) || []);
         return {
           id: event.id,
           event,
-          rows: planRows
+          rows: lanes
             .map((lane) => {
-              const laneNumber = Number(lane.laneNumber || lane.lane || 0);
+              const laneNumber = Number(lane.laneNumber || 0);
               const registration = registrationsByLane.get(laneNumber);
               return {
                 id: registration?.id || `${event.id}-lane-${laneNumber}`,
@@ -2410,7 +2447,7 @@ function App() {
 
   const getJuryRowsForEvent = (eventId) => {
     const event = eventMap.get(eventId);
-    const eventRows = [...(eventRegistrations.get(eventId) || [])].sort((a, b) => {
+    const eventRows = [...withResolvedLanes(event, eventRegistrations.get(eventId) || [])].sort((a, b) => {
       const positionA = Number(a.position || 99);
       const positionB = Number(b.position || 99);
       if (positionA !== positionB) return positionA - positionB;
