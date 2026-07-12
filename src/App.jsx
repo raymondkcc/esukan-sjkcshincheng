@@ -5,10 +5,13 @@ import {
   deleteField,
   deleteDoc,
   doc,
+  getDocs,
   getFirestore,
   onSnapshot,
+  query,
   serverTimestamp,
   setDoc,
+  where,
   writeBatch,
 } from 'firebase/firestore';
 import {
@@ -108,7 +111,8 @@ const DEFAULT_SETTINGS = {
   maxTarikTaliPerHouseYear: 4,
 };
 const SCHOOL_LOGO_PATH = '/logo-sjkc-shin-cheng.png';
-const LIVE_SUMMARY_VERSION = 2;
+const LIVE_SUMMARY_VERSION = 3;
+const STUDENT_YEARS = [1, 2, 3, 4, 5, 6];
 const DEFAULT_EVENT_FORM = {
   startNo: 1,
   baseName: '',
@@ -913,13 +917,44 @@ const buildLiveSummary = ({ houses, events, registrations, students }) => {
     group.results.push(result);
     group.latestMs = Math.max(group.latestMs, Number(result.updatedMs || 0));
   });
-  const latestResultGroups = Array.from(grouped.values())
+  const resultGroups = Array.from(grouped.values())
     .map((group) => ({
       ...group,
       results: group.results.sort((a, b) => Number(a.position || 99) - Number(b.position || 99)),
     }))
+    .sort((a, b) => Number(a.event?.no || 0) - Number(b.event?.no || 0));
+  const latestResultGroups = [...resultGroups]
     .sort((a, b) => b.latestMs - a.latestMs)
     .slice(0, 12);
+
+  const registrationsByEvent = new Map();
+  registrations.forEach((registration) => {
+    if (!registrationsByEvent.has(registration.eventId)) registrationsByEvent.set(registration.eventId, []);
+    registrationsByEvent.get(registration.eventId).push(registration);
+  });
+  const laneGroups = events.map((event) => {
+    const eventRegistrations = registrationsByEvent.get(event.id) || [];
+    const laneRegistrations = eventRegistrations.filter((registration) => Number(registration.laneNumber || 0) > 0);
+    const registrationsByLane = new Map(laneRegistrations.map((registration) => [Number(registration.laneNumber), registration]));
+    const lanePlan = Array.isArray(event.lanePlan) && event.lanePlan.length
+      ? event.lanePlan
+      : laneRegistrations.map((registration) => ({ laneNumber: Number(registration.laneNumber), house: registration.house }));
+    const rows = lanePlan
+      .map((lane) => {
+        const laneNumber = Number(lane.laneNumber || lane.lane || 0);
+        const registration = registrationsByLane.get(laneNumber);
+        const student = registration ? (studentMap.get(registration.studentIc) || {}) : {};
+        return {
+          id: registration?.id || `${event.id}-lane-${laneNumber}`,
+          laneNumber,
+          house: registration?.house || lane.house || '',
+          registration: registration ? compactRegistrationForSummary(registration, student, canonicalStudents) : null,
+        };
+      })
+      .filter((row) => row.laneNumber)
+      .sort((a, b) => a.laneNumber - b.laneNumber || compareHouses(a.house, b.house));
+    return rows.length ? { id: event.id, event: compactEventForSummary(event), rows } : null;
+  }).filter(Boolean);
 
   const athletes = new Map();
   registrations.forEach((registration) => {
@@ -957,7 +992,12 @@ const buildLiveSummary = ({ houses, events, registrations, students }) => {
         .map(([name, total]) => ({ name, total }))
         .sort((a, b) => b.total - a.total),
     },
+    eventOptions: events
+      .map(compactEventForSummary)
+      .sort((a, b) => Number(a.no || 0) - Number(b.no || 0)),
+    resultGroups,
     latestResultGroups,
+    laneGroups,
     athleteLeaders: {
       male: athleteRows.find((row) => row.gender === 'Lelaki') || null,
       female: athleteRows.find((row) => row.gender === 'Perempuan') || null,
@@ -992,6 +1032,7 @@ function App() {
   const [registrations, setRegistrations] = useState([]);
   const [eventForm, setEventForm] = useState(DEFAULT_EVENT_FORM);
   const [studentQuery, setStudentQuery] = useState('');
+  const [studentYearFilter, setStudentYearFilter] = useState('');
   const [studentClassFilter, setStudentClassFilter] = useState('');
   const [studentGenderFilter, setStudentGenderFilter] = useState('');
   const [studentHouseFilter, setStudentHouseFilter] = useState('');
@@ -1031,10 +1072,20 @@ function App() {
   const liveBoardHeaderSchool = String(settings.liveBoardHeaderSchool || settings.schoolName || DEFAULT_SETTINGS.schoolName).trim();
   const liveBoardHeaderTitle = String(settings.liveBoardHeaderTitle || DEFAULT_SETTINGS.liveBoardHeaderTitle).trim();
   const visibleTabs = ACCESS_LEVELS[accessRole]?.tabs || ACCESS_LEVELS.user.tabs;
-  const needsFullData = activeTab !== 'live';
+  const summarySupportsOnDemandViews = liveSummary?.version === LIVE_SUMMARY_VERSION &&
+    Array.isArray(liveSummary?.eventOptions) &&
+    Array.isArray(liveSummary?.resultGroups) &&
+    Array.isArray(liveSummary?.laneGroups);
+  const needsSummaryBootstrap = activeTab !== 'live' && !summarySupportsOnDemandViews;
+  const needsFullData = needsSummaryBootstrap || ['events', 'register', 'results', 'slips'].includes(activeTab);
+  const shouldLoadStudentYear = activeTab === 'students' && Boolean(studentYearFilter) && !needsFullData;
+  const hasFullDataSnapshot = needsFullData &&
+    loadedSections.students &&
+    loadedSections.events &&
+    loadedSections.registrations;
   const loading = !loadedSections.settings ||
-    (needsFullData && (!loadedSections.students || !loadedSections.events || !loadedSections.registrations)) ||
-    (!needsFullData && !loadedSections.liveSummary);
+    (activeTab === 'live' && !loadedSections.liveSummary) ||
+    (needsFullData && (!loadedSections.students || !loadedSections.events || !loadedSections.registrations));
   const nextEventNo = useMemo(() => Math.max(0, ...events.map((event) => Number(event.no || 0))) + 1, [events]);
   const currentLanguage = LANGUAGE_OPTIONS.find((item) => item.id === language) || LANGUAGE_OPTIONS[0];
   const t = (key) => TEXT[language]?.[key] || TEXT.ms[key] || key;
@@ -1213,6 +1264,33 @@ function App() {
   }, [refs, needsFullData]);
 
   useEffect(() => {
+    if (!refs || activeTab !== 'students' || needsFullData || !studentYearFilter) {
+      if (activeTab === 'students' && !needsFullData) {
+        setStudents([]);
+        markLoaded('students');
+      }
+      return undefined;
+    }
+    markLoading(['students']);
+    const yearStart = String(studentYearFilter);
+    const yearEnd = String(Number(studentYearFilter) + 1);
+    let cancelled = false;
+    getDocs(query(refs.students,
+      where('className', '>=', yearStart),
+      where('className', '<', yearEnd),
+    )).then((snapshot) => {
+      if (cancelled) return;
+      setStudents(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort(sortByName));
+      markLoaded('students');
+    }).catch((error) => {
+      if (!cancelled) handleSnapshotError('students', error);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, needsFullData, refs, studentYearFilter]);
+
+  useEffect(() => {
     if (!notice) return undefined;
     const timer = window.setTimeout(() => setNotice(''), 3600);
     return () => window.clearTimeout(timer);
@@ -1224,7 +1302,12 @@ function App() {
     getStudentKey(student),
     resolveCanonicalStudent(student, canonicalStudents),
   ])), [canonicalStudents, students]);
-  const eventMap = useMemo(() => new Map(events.map((event) => [event.id, event])), [events]);
+  const onDemandEvents = useMemo(() => (
+    ['viewResults', 'lanes'].includes(activeTab) && Array.isArray(liveSummary?.eventOptions)
+      ? liveSummary.eventOptions
+      : events
+  ), [activeTab, events, liveSummary?.eventOptions]);
+  const eventMap = useMemo(() => new Map(onDemandEvents.map((event) => [event.id, event])), [onDemandEvents]);
   const registerEvent = eventMap.get(registerEventId);
   const resultEvent = eventMap.get(resultEventId);
   const slipEvent = eventMap.get(slipEventId);
@@ -1267,7 +1350,7 @@ function App() {
       .sort(compareHouses)
   ), [students]);
 
-  const filteredStudents = students.filter((student) => {
+  const filteredStudents = (studentYearFilter ? students : []).filter((student) => {
     const query = studentQuery.trim().toLowerCase();
     const matchesQuery = !query || [student.name, student.chineseName, student.className, student.gender, student.house].some((value) =>
       String(value || '').toLowerCase().includes(query),
@@ -1324,6 +1407,13 @@ function App() {
   const scoreData = activeTab === 'live' && liveSummary?.scoreData ? liveSummary.scoreData : fullScoreData;
 
   const viewResults = useMemo(() => {
+    if (activeTab === 'viewResults' && Array.isArray(liveSummary?.resultGroups)) {
+      return liveSummary.resultGroups.flatMap((group) => group.results.map((result) => ({
+        ...result,
+        student: result.student || {},
+        event: group.event,
+      })));
+    }
     return registrations
       .filter((registration) => isResultPlace(registration.position))
       .map((registration) => ({
@@ -1336,17 +1426,16 @@ function App() {
         if (eventCompare) return eventCompare;
         return Number(a.position || 99) - Number(b.position || 99);
       });
-  }, [eventMap, registrations, studentMap]);
+  }, [activeTab, eventMap, liveSummary?.resultGroups, registrations, studentMap]);
   const resultEventOptions = useMemo(() => (
-    Array.from(new Map(viewResults.map((result) => [result.eventId, result.event])).entries())
-      .map(([id, event]) => ({ id, event }))
-      .filter((item) => item.event)
+    onDemandEvents
+      .map((event) => ({ id: event.id, event }))
       .sort((a, b) => {
         const noCompare = Number(a.event.no || 0) - Number(b.event.no || 0);
         if (noCompare) return noCompare;
         return tEventDisplayName(a.event).localeCompare(tEventDisplayName(b.event), undefined, { numeric: true });
       })
-  ), [language, viewResults]);
+  ), [language, onDemandEvents]);
   const buildResultGroups = (results, sortMode = 'event') => {
     const grouped = new Map();
     results.forEach((result) => {
@@ -1386,16 +1475,23 @@ function App() {
     }),
   }));
   const filteredViewResults = useMemo(() => (
-    viewResultEventFilter ? viewResults.filter((result) => result.eventId === viewResultEventFilter) : viewResults
+    viewResultEventFilter ? viewResults.filter((result) => result.eventId === viewResultEventFilter) : []
   ), [viewResultEventFilter, viewResults]);
   const viewResultGroups = useMemo(() => buildResultGroups(filteredViewResults), [filteredViewResults, language]);
-  const laneEventOptions = useMemo(() => (
-    events
+  const laneEventOptions = useMemo(() => {
+    if (activeTab === 'lanes' && Array.isArray(liveSummary?.laneGroups)) {
+      return liveSummary.laneGroups
+        .map((group) => group.event)
+        .sort((a, b) => Number(a.no || 0) - Number(b.no || 0) || tEventDisplayName(a).localeCompare(tEventDisplayName(b), undefined, { numeric: true }));
+    }
+    return events
       .filter((event) => (Array.isArray(event.lanePlan) && event.lanePlan.length) || (eventRegistrations.get(event.id) || []).some((registration) => Number(registration.laneNumber || 0) > 0))
-      .sort((a, b) => Number(a.no || 0) - Number(b.no || 0) || tEventDisplayName(a).localeCompare(tEventDisplayName(b), undefined, { numeric: true }))
-  ), [eventRegistrations, events, language]);
+      .sort((a, b) => Number(a.no || 0) - Number(b.no || 0) || tEventDisplayName(a).localeCompare(tEventDisplayName(b), undefined, { numeric: true }));
+  }, [activeTab, eventRegistrations, events, language, liveSummary?.laneGroups]);
   const laneGroups = useMemo(() => (
-    laneEventOptions
+    activeTab === 'lanes' && Array.isArray(liveSummary?.laneGroups)
+      ? (laneEventFilter ? liveSummary.laneGroups.filter((group) => group.id === laneEventFilter) : [])
+      : laneEventOptions
       .filter((event) => !laneEventFilter || event.id === laneEventFilter)
       .map((event) => {
         const laneRegistrations = [...(eventRegistrations.get(event.id) || [])]
@@ -1423,7 +1519,7 @@ function App() {
         };
       })
       .filter((group) => group.rows.length)
-  ), [eventRegistrations, laneEventFilter, laneEventOptions]);
+  ), [activeTab, eventRegistrations, laneEventFilter, laneEventOptions, liveSummary?.laneGroups]);
   const fullAthleteLeaders = useMemo(() => {
     const athletes = new Map();
     registrations.forEach((registration) => {
@@ -1546,7 +1642,7 @@ function App() {
       return;
     }
     await setDoc(refs.settings, { ...payload, updatedAt: serverTimestamp() }, { merge: true });
-    await refreshLiveSummary({ settings: payload, houses: payload.houses });
+    if (hasFullDataSnapshot) await refreshLiveSummary({ settings: payload, houses: payload.houses });
     savedSettingsRef.current = settingsSignature;
     setNotice('Settings saved.');
   };
@@ -1719,7 +1815,9 @@ function App() {
       const nextSettings = importedHouses.length
         ? { ...settings, houses: sortHouseList(importedHouses) }
         : settings;
-      await refreshLiveSummary({ settings: nextSettings, houses: nextSettings.houses, students: Array.from(nextStudentMap.values()) });
+      if (hasFullDataSnapshot) {
+        await refreshLiveSummary({ settings: nextSettings, houses: nextSettings.houses, students: Array.from(nextStudentMap.values()) });
+      }
       setNotice(`${validStudents.length} students imported. Houses updated from template.`);
     } catch (error) {
       console.error(error);
@@ -1767,9 +1865,13 @@ function App() {
       setNotice('Name, class, gender, and house are required.');
       return;
     }
+    const registrationRows = hasFullDataSnapshot
+      ? registrations.filter((registration) => registration.studentIc === studentKey)
+      : (await getDocs(query(refs.registrations, where('studentIc', '==', studentKey)))).docs
+        .map((item) => ({ id: item.id, ...item.data() }));
     const batch = writeBatch(db);
     batch.set(doc(refs.students, studentKey), payload, { merge: true });
-    registrations.filter((registration) => registration.studentIc === studentKey).forEach((registration) => {
+    registrationRows.forEach((registration) => {
       batch.set(doc(refs.registrations, registration.id), {
         className: payload.className,
         house: payload.house,
@@ -1778,14 +1880,19 @@ function App() {
       }, { merge: true });
     });
     await batch.commit();
-    await refreshLiveSummary({
-      students: students.map((item) => (getStudentKey(item) === studentKey ? { ...item, ...payload } : item)),
-      registrations: registrations.map((registration) => (
-        registration.studentIc === studentKey
-          ? { ...registration, className: payload.className, house: payload.house, updatedMs: Date.now() }
-          : registration
-      )),
-    });
+    setStudents((current) => current.map((item) => (
+      getStudentKey(item) === studentKey ? { ...item, ...payload } : item
+    )).sort(sortByName));
+    if (hasFullDataSnapshot) {
+      await refreshLiveSummary({
+        students: students.map((item) => (getStudentKey(item) === studentKey ? { ...item, ...payload } : item)),
+        registrations: registrations.map((registration) => (
+          registration.studentIc === studentKey
+            ? { ...registration, className: payload.className, house: payload.house, updatedMs: Date.now() }
+            : registration
+        )),
+      });
+    }
     cancelStudentEdit();
     setNotice('Student updated.');
   };
@@ -1799,16 +1906,23 @@ function App() {
     if (!studentKey) return;
     const confirmed = window.confirm(`Delete ${displayStudentName(student, studentKey)} and all event registrations?`);
     if (!confirmed) return;
+    const registrationRows = hasFullDataSnapshot
+      ? registrations.filter((registration) => registration.studentIc === studentKey)
+      : (await getDocs(query(refs.registrations, where('studentIc', '==', studentKey)))).docs
+        .map((item) => ({ id: item.id, ...item.data() }));
     const batch = writeBatch(db);
-    registrations.filter((registration) => registration.studentIc === studentKey).forEach((registration) => {
+    registrationRows.forEach((registration) => {
       batch.delete(doc(refs.registrations, registration.id));
     });
     batch.delete(doc(refs.students, studentKey));
     await batch.commit();
-    await refreshLiveSummary({
-      students: students.filter((item) => getStudentKey(item) !== studentKey),
-      registrations: registrations.filter((registration) => registration.studentIc !== studentKey),
-    });
+    setStudents((current) => current.filter((item) => getStudentKey(item) !== studentKey));
+    if (hasFullDataSnapshot) {
+      await refreshLiveSummary({
+        students: students.filter((item) => getStudentKey(item) !== studentKey),
+        registrations: registrations.filter((registration) => registration.studentIc !== studentKey),
+      });
+    }
     if (editingStudentKey === studentKey) cancelStudentEdit();
     setNotice('Student deleted.');
   };
@@ -2518,26 +2632,36 @@ function App() {
               </button>
               <label>
                 {t('search')}
-                <input value={studentQuery} onChange={(event) => setStudentQuery(event.target.value)} placeholder={`${t('name')}, ${t('chineseName')}, ${t('class')}, ${t('gender')}, ${t('house')}`} />
+                <input disabled={!studentYearFilter} value={studentQuery} onChange={(event) => setStudentQuery(event.target.value)} placeholder={`${t('name')}, ${t('chineseName')}, ${t('class')}, ${t('gender')}, ${t('house')}`} />
               </label>
               <div className="student-filter-grid">
                 <label>
+                  {t('year')}
+                  <select value={studentYearFilter} onChange={(event) => {
+                    setStudentYearFilter(event.target.value);
+                    setStudentClassFilter('');
+                  }}>
+                    <option value="">{t('choose')}</option>
+                    {STUDENT_YEARS.map((year) => <option key={year} value={year}>{tYear(year)}</option>)}
+                  </select>
+                </label>
+                <label>
                   {t('class')}
-                  <select value={studentClassFilter} onChange={(event) => setStudentClassFilter(event.target.value)}>
+                  <select disabled={!studentYearFilter} value={studentClassFilter} onChange={(event) => setStudentClassFilter(event.target.value)}>
                     <option value="">{t('allClasses')}</option>
                     {studentClassOptions.map((className) => <option key={className} value={className}>{className}</option>)}
                   </select>
                 </label>
                 <label>
                   {t('gender')}
-                  <select value={studentGenderFilter} onChange={(event) => setStudentGenderFilter(event.target.value)}>
+                  <select disabled={!studentYearFilter} value={studentGenderFilter} onChange={(event) => setStudentGenderFilter(event.target.value)}>
                     <option value="">{t('allGenders')}</option>
                     {studentGenderOptions.map((gender) => <option key={gender} value={gender}>{tGender(gender)}</option>)}
                   </select>
                 </label>
                 <label>
                   {t('house')}
-                  <select value={studentHouseFilter} onChange={(event) => setStudentHouseFilter(event.target.value)}>
+                  <select disabled={!studentYearFilter} value={studentHouseFilter} onChange={(event) => setStudentHouseFilter(event.target.value)}>
                     <option value="">{t('allHouses')}</option>
                     {studentHouseOptions.map((house) => <option key={house} value={house}>{house}</option>)}
                   </select>
@@ -2552,6 +2676,7 @@ function App() {
                 type="button"
                 onClick={() => {
                   setStudentQuery('');
+                  setStudentYearFilter('');
                   setStudentClassFilter('');
                   setStudentGenderFilter('');
                   setStudentHouseFilter('');
@@ -2568,6 +2693,7 @@ function App() {
                   <tr><th>{t('name')}</th><th>{t('chineseName')}</th><th>{t('class')}</th><th>{t('gender')}</th><th>{t('house')}</th><th></th></tr>
                 </thead>
                 <tbody>
+                  {!studentYearFilter && <tr><td colSpan="6">{t('choose')}</td></tr>}
                   {filteredStudents.map((student) => {
                     const studentKey = getStudentKey(student);
                     const editing = editingStudentKey === studentKey && studentEditForm;
@@ -3028,7 +3154,7 @@ function App() {
                     </div>
                     {group.rows.map((row) => {
                       const registration = row.registration;
-                      const student = registration ? (studentMap.get(registration.studentIc) || {}) : {};
+                      const student = registration ? (registration.student || studentMap.get(registration.studentIc) || {}) : {};
                       return (
                         <div className="lane-detail-grid" key={row.id}>
                           <b>{row.laneNumber}</b>
