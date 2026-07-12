@@ -470,6 +470,63 @@ button {
   object-fit: contain;
 }
 
+.live-pin-controls {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  margin: -4px 0 18px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--surface-soft);
+}
+
+.live-pin-title {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent);
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.live-pin-selectors {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.live-pin-select {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 6px;
+}
+
+.live-pin-select label {
+  min-width: 0;
+}
+
+.live-pin-select select {
+  min-width: 0;
+}
+
+.live-pin-clear {
+  flex: 0 0 auto;
+}
+
+.live-pin-clear:disabled {
+  visibility: hidden;
+}
+
+.live-pin-save {
+  white-space: nowrap;
+}
+
 .live-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
@@ -528,6 +585,10 @@ button {
 }
 
 .live-grid:fullscreen .live-side-stack {
+  display: none;
+}
+
+.live-grid:fullscreen .live-pin-controls {
   display: none;
 }
 
@@ -1734,6 +1795,16 @@ td .house {
     grid-template-columns: minmax(96px, 1.2fr) repeat(4, minmax(46px, 1fr));
     gap: 5px;
     padding-inline: 6px;
+  }
+
+  .live-pin-controls,
+  .live-pin-selectors {
+    grid-template-columns: 1fr;
+  }
+
+  .live-pin-title,
+  .live-pin-save {
+    width: 100%;
   }
 
   .live-grid:fullscreen .winner-chip.house {

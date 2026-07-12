@@ -26,6 +26,7 @@ import {
   Minimize2,
   Monitor,
   Moon,
+  Pin,
   Printer,
   Save,
   SquarePen,
@@ -35,6 +36,7 @@ import {
   Trophy,
   Upload,
   Users,
+  X,
 } from 'lucide-react';
 
 const CANONICAL_HOUSES = ['红 MERAH', '黄 KUNING', '蓝 BIRU', '青 HIJAU'];
@@ -103,6 +105,7 @@ const DEFAULT_SETTINGS = {
   year: new Date().getFullYear(),
   houses: DEFAULT_HOUSES,
   liveBoardMode: 'total-only',
+  liveBoardPinnedEventIds: [],
   liveBoardHeaderSchool: '',
   liveBoardHeaderTitle: 'Papan Markah Kejohanan Sukan Tahunan',
   maxIndividuTahap1: 2,
@@ -178,6 +181,8 @@ const TEXT = {
     fullscreen: 'Skrin penuh',
     exitFullscreen: 'Keluar skrin penuh',
     latest: 'Terkini',
+    pinnedEvents: 'Acara dipinkan',
+    savePinnedEvents: 'Simpan acara dipinkan',
     results: 'Keputusan',
     classMarks: 'Markah Kelas',
     optional: 'Pilihan',
@@ -341,6 +346,8 @@ const TEXT = {
     fullscreen: 'Fullscreen',
     exitFullscreen: 'Exit fullscreen',
     latest: 'Latest',
+    pinnedEvents: 'Pinned events',
+    savePinnedEvents: 'Save pinned events',
     results: 'Results',
     classMarks: 'Class Marks',
     optional: 'Optional',
@@ -504,6 +511,8 @@ const TEXT = {
     fullscreen: '全屏',
     exitFullscreen: '退出全屏',
     latest: '最新',
+    pinnedEvents: '置顶项目',
+    savePinnedEvents: '保存置顶项目',
     results: '成绩',
     classMarks: '班级分数',
     optional: '选项',
@@ -1051,6 +1060,25 @@ const compactRegistrationForSummary = (registration = {}, student = {}, canonica
   updatedMs: Number(registration.updatedMs || 0),
   student: compactStudentForSummary(student),
 });
+const buildScoreDataFromResultRows = (houses, rows) => {
+  const houseTotals = houses.map((house) => ({ name: house, total: 0 }));
+  const classTotals = new Map();
+  rows.forEach((result) => {
+    if (!isResultPlace(result.position)) return;
+    const house = normalizeHouse(result.house || result.student?.house);
+    const points = Number(result.points || 0);
+    const houseRow = houseTotals.find((item) => houseMatchKey(item.name) === houseMatchKey(house));
+    if (houseRow) houseRow.total += points;
+    const className = String(result.student?.className || result.className || '').trim();
+    if (className) classTotals.set(className, (classTotals.get(className) || 0) + points);
+  });
+  return {
+    houses: houseTotals.sort((a, b) => b.total - a.total || compareHouses(a.name, b.name)),
+    classes: Array.from(classTotals.entries())
+      .map(([name, total]) => ({ name, total }))
+      .sort((a, b) => b.total - a.total),
+  };
+};
 const buildLiveSummary = ({ houses, events, registrations, students }) => {
   const canonicalStudents = buildCanonicalStudentMap(students);
   const studentMap = new Map(students.map((student) => [
@@ -1241,6 +1269,12 @@ function App() {
   }, [settings.houses]);
   const liveBoardHeaderSchool = String(settings.liveBoardHeaderSchool || settings.schoolName || DEFAULT_SETTINGS.schoolName).trim();
   const liveBoardHeaderTitle = String(settings.liveBoardHeaderTitle || DEFAULT_SETTINGS.liveBoardHeaderTitle).trim();
+  const liveEventOptions = Array.isArray(liveSummary?.eventOptions) ? liveSummary.eventOptions : events;
+  const liveEventIdSet = new Set(liveEventOptions.map((event) => event.id));
+  const livePinnedEventIds = Array.from(new Set(
+    (Array.isArray(settings.liveBoardPinnedEventIds) ? settings.liveBoardPinnedEventIds : [])
+      .filter((eventId) => liveEventIdSet.has(eventId)),
+  )).slice(0, 3);
   const visibleTabs = ACCESS_LEVELS[accessRole]?.tabs || ACCESS_LEVELS.user.tabs;
   const summarySupportsOnDemandViews = liveSummary?.version === LIVE_SUMMARY_VERSION &&
     Array.isArray(liveSummary?.eventOptions) &&
@@ -1623,7 +1657,21 @@ function App() {
         .sort((a, b) => b.total - a.total),
     };
   }, [houses, registrations, studentMap]);
-  const scoreData = activeTab === 'live' && liveSummary?.scoreData ? liveSummary.scoreData : fullScoreData;
+  const pinnedLiveScoreData = useMemo(() => {
+    if (!livePinnedEventIds.length) return null;
+    const summaryRows = Array.isArray(liveSummary?.resultGroups)
+      ? liveSummary.resultGroups
+        .filter((group) => livePinnedEventIds.includes(group.id))
+        .flatMap((group) => group.results)
+      : [];
+    const fullRows = registrations
+      .filter((registration) => livePinnedEventIds.includes(registration.eventId))
+      .map((registration) => ({ ...registration, student: studentMap.get(registration.studentIc) || {} }));
+    return buildScoreDataFromResultRows(houses, summaryRows.length || !liveSummary?.resultGroups ? fullRows : summaryRows);
+  }, [houses, livePinnedEventIds, liveSummary?.resultGroups, registrations, studentMap]);
+  const scoreData = activeTab === 'live' && livePinnedEventIds.length
+    ? pinnedLiveScoreData
+    : activeTab === 'live' && liveSummary?.scoreData ? liveSummary.scoreData : fullScoreData;
 
   const viewResults = useMemo(() => {
     if (activeTab === 'viewResults' && summarySupportsOnDemandViews) {
@@ -1682,9 +1730,19 @@ function App() {
   const latestResultGroups = activeTab === 'live' && Array.isArray(liveSummary?.latestResultGroups)
     ? liveSummary.latestResultGroups
     : fullLatestResultGroups;
-  const latestLiveResultId = latestResultGroups[0]?.id || '';
-  const latestLiveResultStamp = latestResultGroups[0]?.latestMs || 0;
-  const latestWinnerRows = latestResultGroups.slice(0, 3).map((group) => ({
+  const liveResultGroups = useMemo(() => {
+    if (!livePinnedEventIds.length) return latestResultGroups;
+    const groupedResults = new Map((Array.isArray(liveSummary?.resultGroups) ? liveSummary.resultGroups : latestResultGroups)
+      .map((group) => [group.id, group]));
+    const eventById = new Map(liveEventOptions.map((event) => [event.id, event]));
+    return livePinnedEventIds.map((id) => (
+      groupedResults.get(id) || { id, event: eventById.get(id), results: [], latestMs: 0 }
+    )).filter((group) => group.event);
+  }, [latestResultGroups, liveEventOptions, livePinnedEventIds, liveSummary?.resultGroups]);
+  const latestLiveResult = [...liveResultGroups].sort((a, b) => Number(b.latestMs || 0) - Number(a.latestMs || 0))[0];
+  const latestLiveResultId = latestLiveResult?.id || '';
+  const latestLiveResultStamp = latestLiveResult?.latestMs || 0;
+  const latestWinnerRows = liveResultGroups.slice(0, 3).map((group) => ({
     id: group.id,
     event: group.event,
     winners: RESULT_PLACES.map((position) => {
@@ -1859,6 +1917,28 @@ function App() {
     if (hasFullDataSnapshot) await refreshLiveSummary({ settings: payload, houses: payload.houses });
     savedSettingsRef.current = settingsSignature;
     setNotice('Settings saved.');
+  };
+
+  const updatePinnedLiveEvent = (slot, eventId) => {
+    setSettings((current) => {
+      const validEventIds = new Set(liveEventOptions.map((event) => event.id));
+      const currentPins = Array.from(new Set(
+        (Array.isArray(current.liveBoardPinnedEventIds) ? current.liveBoardPinnedEventIds : [])
+          .filter((id) => validEventIds.has(id)),
+      )).slice(0, 3);
+      const nextPins = [...currentPins];
+
+      if (eventId && validEventIds.has(eventId)) {
+        nextPins[slot] = eventId;
+      } else if (!eventId && slot < nextPins.length) {
+        nextPins.splice(slot, 1);
+      }
+
+      return {
+        ...current,
+        liveBoardPinnedEventIds: Array.from(new Set(nextPins.filter((id) => validEventIds.has(id)))).slice(0, 3),
+      };
+    });
   };
 
   const toggleCategory = (category) => {
@@ -2764,6 +2844,47 @@ function App() {
                   {isLiveBoardFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                 </button>
               </div>
+              {accessRole === 'admin' && (
+                <div className="live-pin-controls">
+                  <div className="live-pin-title">
+                    <Pin size={18} />
+                    <strong>{t('pinnedEvents')}</strong>
+                  </div>
+                  <div className="live-pin-selectors">
+                    {[0, 1, 2].map((slot) => {
+                      const selectedEventId = livePinnedEventIds[slot] || '';
+                      return (
+                        <div className="live-pin-select" key={slot}>
+                          <label>
+                            {`${t('event')} ${slot + 1}`}
+                            <select value={selectedEventId} onChange={(event) => updatePinnedLiveEvent(slot, event.target.value)}>
+                              <option value="">{t('chooseEvent')}</option>
+                              {liveEventOptions.map((event) => (
+                                <option key={event.id} value={event.id} disabled={event.id !== selectedEventId && livePinnedEventIds.includes(event.id)}>
+                                  {tEventLabel(event)}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <button
+                            className="icon-button live-pin-clear"
+                            type="button"
+                            disabled={!selectedEventId}
+                            onClick={() => updatePinnedLiveEvent(slot, '')}
+                            title={t('clear')}
+                            aria-label={t('clear')}
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <button className="primary-button live-pin-save" type="button" onClick={saveSettings}>
+                    <Save size={16} /> {t('savePinnedEvents')}
+                  </button>
+                </div>
+              )}
               <div className="score-list">
                 {scoreData.houses.map((house, index) => {
                   const maxScore = Math.max(...scoreData.houses.map((item) => item.total), 1);
@@ -2784,7 +2905,7 @@ function App() {
             <div className="panel fullscreen-winners-panel">
               <div className="section-head">
                 <div>
-                  <p className="eyebrow">{t('latest')}</p>
+                  <p className="eyebrow">{livePinnedEventIds.length ? t('pinnedEvents') : t('latest')}</p>
                   <h2>{t('results')}</h2>
                 </div>
                 <FileSpreadsheet size={22} />
@@ -2860,7 +2981,7 @@ function App() {
               <div className="panel results-panel">
                 <div className="section-head">
                   <div>
-                    <p className="eyebrow">{t('latest')}</p>
+                    <p className="eyebrow">{livePinnedEventIds.length ? t('pinnedEvents') : t('latest')}</p>
                     <h2>{t('results')}</h2>
                   </div>
                   <FileSpreadsheet size={22} />
