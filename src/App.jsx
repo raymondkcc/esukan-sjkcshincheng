@@ -1860,7 +1860,7 @@ function App() {
     }),
   }));
   const filteredViewResults = useMemo(() => (
-    viewResultEventFilter ? viewResults.filter((result) => result.eventId === viewResultEventFilter) : []
+    viewResultEventFilter ? viewResults.filter((result) => result.eventId === viewResultEventFilter) : viewResults
   ), [viewResultEventFilter, viewResults]);
   const viewResultGroups = useMemo(() => buildResultGroups(filteredViewResults), [filteredViewResults, language]);
   const laneEventOptions = useMemo(() => {
