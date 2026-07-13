@@ -851,6 +851,9 @@ const normalizeLiveSummary = (summary) => {
     scoreData: summary.scoreData ? {
       ...summary.scoreData,
       houses: mergeHouseScoreRows(summary.scoreData.houses),
+      classes: Array.isArray(summary.scoreData.classes)
+        ? [...summary.scoreData.classes].sort((a, b) => Number(b.total || 0) - Number(a.total || 0) || compareClassNames(a.name, b.name))
+        : summary.scoreData.classes,
     } : summary.scoreData,
     latestResultGroups: Array.isArray(summary.latestResultGroups) ? summary.latestResultGroups.map(normalizeResultGroup) : summary.latestResultGroups,
     resultGroups: Array.isArray(summary.resultGroups) ? summary.resultGroups.map(normalizeResultGroup) : summary.resultGroups,
@@ -875,7 +878,26 @@ const normalizeLiveSummary = (summary) => {
     } : summary.athleteLeaders,
   };
 };
-const sortByName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''));
+const CLASS_SECTION_ORDER = ['M', 'J', 'K', 'H', 'B', 'U', 'E', 'P'];
+const compareClassNames = (first, second) => {
+  const parse = (value) => {
+    const label = String(value || '').trim();
+    const compactLabel = label.toLocaleUpperCase('ms-MY').replace(/\s+/g, '');
+    const year = Number(compactLabel.match(/(?:TAHUN)?([1-6])/)?.[1] || 0);
+    const section = year ? (compactLabel.match(/([A-Z])$/)?.[1] || '') : '';
+    const sectionIndex = CLASS_SECTION_ORDER.indexOf(section);
+    return { label, year, sectionIndex: sectionIndex === -1 ? CLASS_SECTION_ORDER.length : sectionIndex };
+  };
+  const left = parse(first);
+  const right = parse(second);
+  if (left.year !== right.year) return left.year - right.year;
+  if (left.sectionIndex !== right.sectionIndex) return left.sectionIndex - right.sectionIndex;
+  return left.label.localeCompare(right.label, undefined, { numeric: true });
+};
+const sortByName = (a, b) => (
+  compareClassNames(a.className, b.className) ||
+  String(a.name || '').localeCompare(String(b.name || ''))
+);
 const hashString = (value) => {
   let hash = 0;
   String(value || '').split('').forEach((character) => {
@@ -981,6 +1003,7 @@ const isRelayEvent = (event) => {
 const getTeamCountPerHouse = (event) => Math.max(1, Math.min(8, Number(event?.teamCountPerHouse || 1) || 1));
 const clampTeamCountPerHouse = (value) => Math.max(1, Math.min(8, Number(value || 1) || 1));
 const getHouseEntryTeamNumber = (registration) => Math.max(1, Number(registration?.teamNumber || 1) || 1);
+const getHouseEntryTeamSuffix = (registration) => String.fromCharCode(64 + getHouseEntryTeamNumber(registration));
 const displayEntryName = (registration, student = {}, event = null, teamLabel = 'Team', resolveTeamMember = (member) => member) => {
   if (isRelayEntry(registration)) {
     const members = Array.isArray(registration.teamMembers) ? registration.teamMembers : [];
@@ -992,8 +1015,7 @@ const displayEntryName = (registration, student = {}, event = null, teamLabel = 
   }
   if (!isHouseEntry(registration)) return displayStudentName(student, registration.studentIc);
   const house = normalizeHouse(registration.house || student.house || registration.studentIc);
-  const teamNumber = getHouseEntryTeamNumber(registration);
-  return getTeamCountPerHouse(event) > 1 ? `${house} ${teamLabel} ${teamNumber}` : house;
+  return getTeamCountPerHouse(event) > 1 ? `${house} ${getHouseEntryTeamSuffix(registration)}` : house;
 };
 const displayEntryClass = (registration, student = {}) => {
   if (isRelayEntry(registration)) {
@@ -1141,7 +1163,7 @@ const buildScoreDataFromResultRows = (houses, rows) => {
     houses: houseTotals.sort((a, b) => b.total - a.total || compareHouses(a.name, b.name)),
     classes: Array.from(classTotals.entries())
       .map(([name, total]) => ({ name, total }))
-      .sort((a, b) => b.total - a.total),
+      .sort((a, b) => b.total - a.total || compareClassNames(a.name, b.name)),
   };
 };
 const buildLiveSummary = ({ houses, events, registrations, students }) => {
@@ -1252,7 +1274,7 @@ const buildLiveSummary = ({ houses, events, registrations, students }) => {
       houses: houseTotals.sort((a, b) => b.total - a.total || compareHouses(a.name, b.name)),
       classes: Array.from(classTotals.entries())
         .map(([name, total]) => ({ name, total }))
-        .sort((a, b) => b.total - a.total),
+        .sort((a, b) => b.total - a.total || compareClassNames(a.name, b.name)),
     },
     eventOptions: events
       .map(compactEventForSummary)
@@ -1614,14 +1636,14 @@ function App() {
     const studentB = studentMap.get(b.studentIc) || {};
     const houseCompare = compareHouses(a.house || studentA.house, b.house || studentB.house);
     if (houseCompare) return houseCompare;
-    const classCompare = String(studentA.className || a.className || '').localeCompare(String(studentB.className || b.className || ''), undefined, { numeric: true });
+    const classCompare = compareClassNames(studentA.className || a.className, studentB.className || b.className);
     if (classCompare) return classCompare;
     return displayEntryName(a, studentA, slipEvent, t('team'), resolveStudent).localeCompare(displayEntryName(b, studentB, slipEvent, t('team'), resolveStudent));
   });
   const registeredStudentSet = new Set(registrationsForRegisterEvent.map((item) => item.studentIc));
   const studentClassOptions = useMemo(() => (
     Array.from(new Set(visibleStudents.map((student) => String(student.className || '').trim()).filter(Boolean)))
-      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+      .sort(compareClassNames)
   ), [visibleStudents]);
   const studentGenderOptions = useMemo(() => (
     Array.from(new Set(visibleStudents.map((student) => String(student.gender || '').trim()).filter(Boolean)))
@@ -1658,7 +1680,7 @@ function App() {
       return matchesQuery && matchesHouse && matchesYear && matchesGender;
     })
     .sort((a, b) => {
-      const classCompare = String(a.className || '').localeCompare(String(b.className || ''), undefined, { numeric: true });
+      const classCompare = compareClassNames(a.className, b.className);
       if (classCompare) return classCompare;
       return String(a.name || '').localeCompare(String(b.name || ''));
     });
@@ -1723,12 +1745,13 @@ function App() {
       houses: houseTotals.sort((a, b) => b.total - a.total || compareHouses(a.name, b.name)),
       classes: Array.from(classTotals.entries())
         .map(([name, total]) => ({ name, total }))
-        .sort((a, b) => b.total - a.total),
+        .sort((a, b) => b.total - a.total || compareClassNames(a.name, b.name)),
     };
   }, [houses, registrations, studentMap]);
   const pinnedLiveScoreData = useMemo(() => {
     if (!livePinnedEventIds.length) return null;
-    const summaryRows = Array.isArray(liveSummary?.resultGroups)
+    const hasLiveSummaryResultGroups = Array.isArray(liveSummary?.resultGroups);
+    const summaryRows = hasLiveSummaryResultGroups
       ? liveSummary.resultGroups
         .filter((group) => livePinnedEventIds.includes(group.id))
         .flatMap((group) => group.results)
@@ -1736,7 +1759,7 @@ function App() {
     const fullRows = registrations
       .filter((registration) => livePinnedEventIds.includes(registration.eventId))
       .map((registration) => ({ ...registration, student: studentMap.get(registration.studentIc) || {} }));
-    return buildScoreDataFromResultRows(houses, summaryRows.length || !liveSummary?.resultGroups ? fullRows : summaryRows);
+    return buildScoreDataFromResultRows(houses, hasLiveSummaryResultGroups ? summaryRows : fullRows);
   }, [houses, livePinnedEventIds, liveSummary?.resultGroups, registrations, studentMap]);
   const scoreData = activeTab === 'live' && livePinnedEventIds.length
     ? pinnedLiveScoreData
@@ -1817,7 +1840,11 @@ function App() {
     winners: RESULT_PLACES.map((position) => {
       const result = group.results.find((item) => Number(item.position || 0) === position);
       if (!result) return null;
-      return normalizeHouse(result.house || result.student?.house || '');
+      const house = normalizeHouse(result.house || result.student?.house || '');
+      return {
+        house,
+        label: displayEntryName(result, result.student, group.event, t('team'), resolveStudent),
+      };
     }),
   }));
   const filteredViewResults = useMemo(() => (
@@ -1906,7 +1933,7 @@ function App() {
     .sort((a, b) => {
       const houseCompare = compareHouses(a.registration.house || a.student.house, b.registration.house || b.student.house);
       if (houseCompare) return houseCompare;
-      const classCompare = String(a.student.className || a.registration.className || '').localeCompare(String(b.student.className || b.registration.className || ''), undefined, { numeric: true });
+      const classCompare = compareClassNames(a.student.className || a.registration.className, b.student.className || b.registration.className);
       if (classCompare) return classCompare;
       return displayEntryName(a.registration, a.student, slipEvent, t('team'), resolveStudent).localeCompare(displayEntryName(b.registration, b.student, slipEvent, t('team'), resolveStudent));
     })
@@ -2654,7 +2681,7 @@ function App() {
       const studentB = studentMap.get(b.studentIc) || {};
       const houseCompare = compareHouses(a.house || studentA.house, b.house || studentB.house);
       if (houseCompare) return houseCompare;
-      const classCompare = String(studentA.className || a.className || '').localeCompare(String(studentB.className || b.className || ''), undefined, { numeric: true });
+      const classCompare = compareClassNames(studentA.className || a.className, studentB.className || b.className);
       if (classCompare) return classCompare;
       return displayEntryName(a, studentA, event, t('team'), resolveStudent).localeCompare(displayEntryName(b, studentB, event, t('team'), resolveStudent));
     });
@@ -3021,9 +3048,9 @@ function App() {
                 {latestWinnerRows.length ? latestWinnerRows.map((row, rowIndex) => (
                   <div className="winner-row" key={row.id}>
                     <strong>{rowIndex + 1}. {tEventDisplayName(row.event)}</strong>
-                    {row.winners.map((house, index) => (
+                    {row.winners.map((winner, index) => (
                       <span key={`${row.id}-${index}`} className="winner-cell">
-                        {house ? <b className={`${houseClassName(house)} winner-chip`}>{house}</b> : <em>-</em>}
+                        {winner ? <b className={`${houseClassName(winner.house)} winner-chip`}>{winner.label}</b> : <em>-</em>}
                       </span>
                     ))}
                   </div>
