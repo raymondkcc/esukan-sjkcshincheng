@@ -183,6 +183,7 @@ const TEXT = {
     fullscreen: 'Skrin penuh',
     exitFullscreen: 'Keluar skrin penuh',
     latest: 'Terkini',
+    overview: 'Keseluruhan',
     pinnedEvents: 'Acara dipinkan',
     savePinnedEvents: 'Simpan acara dipinkan',
     noticeSuccess: 'Berjaya',
@@ -369,6 +370,7 @@ const TEXT = {
     fullscreen: 'Fullscreen',
     exitFullscreen: 'Exit fullscreen',
     latest: 'Latest',
+    overview: 'Overview',
     pinnedEvents: 'Pinned events',
     savePinnedEvents: 'Save pinned events',
     noticeSuccess: 'Success',
@@ -555,6 +557,7 @@ const TEXT = {
     fullscreen: '全屏',
     exitFullscreen: '退出全屏',
     latest: '最新',
+    overview: '总览',
     pinnedEvents: '置顶项目',
     savePinnedEvents: '保存置顶项目',
     noticeSuccess: '操作成功',
@@ -1017,6 +1020,13 @@ const displayEntryName = (registration, student = {}, event = null, teamLabel = 
   const house = normalizeHouse(registration.house || student.house || registration.studentIc);
   return getTeamCountPerHouse(event) > 1 ? `${house} ${getHouseEntryTeamSuffix(registration)}` : house;
 };
+const displaySlipEntryName = (registration, student = {}, event = null, resolveTeamMember = (member) => member) => {
+  if (!isHouseEntry(registration) || getTeamCountPerHouse(event) <= 1) {
+    return displayEntryName(registration, student, event, '', resolveTeamMember);
+  }
+  const house = normalizeHouse(registration.house || student.house || registration.studentIc);
+  return `${house} Group ${getHouseEntryTeamSuffix(registration)}`;
+};
 const displayEntryClass = (registration, student = {}) => {
   if (isRelayEntry(registration)) {
     const classes = (Array.isArray(registration.teamMembers) ? registration.teamMembers : [])
@@ -1306,6 +1316,7 @@ function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('esukan-theme') || 'light');
   const [language, setLanguage] = useState(() => localStorage.getItem('esukan-language') || 'ms');
   const [isLiveBoardFullscreen, setIsLiveBoardFullscreen] = useState(false);
+  const [liveBoardView, setLiveBoardView] = useState('pinned');
   const [loadedSections, setLoadedSections] = useState({ settings: false, liveSummary: false, students: false, events: false, registrations: false });
   const [uploadingStudents, setUploadingStudents] = useState(false);
   const [notice, setNotice] = useState(null);
@@ -1362,6 +1373,7 @@ function App() {
     (Array.isArray(settings.liveBoardPinnedEventIds) ? settings.liveBoardPinnedEventIds : [])
       .filter((eventId) => liveEventIdSet.has(eventId)),
   )).slice(0, 3);
+  const showPinnedLiveBoard = livePinnedEventIds.length > 0 && (accessRole !== 'admin' || liveBoardView === 'pinned');
   const visibleTabs = ACCESS_LEVELS[accessRole]?.tabs || ACCESS_LEVELS.user.tabs;
   const summarySupportsOnDemandViews = liveSummary?.version === LIVE_SUMMARY_VERSION &&
     Array.isArray(liveSummary?.eventOptions) &&
@@ -1638,7 +1650,7 @@ function App() {
     if (houseCompare) return houseCompare;
     const classCompare = compareClassNames(studentA.className || a.className, studentB.className || b.className);
     if (classCompare) return classCompare;
-    return displayEntryName(a, studentA, slipEvent, t('team'), resolveStudent).localeCompare(displayEntryName(b, studentB, slipEvent, t('team'), resolveStudent));
+    return displaySlipEntryName(a, studentA, slipEvent, resolveStudent).localeCompare(displaySlipEntryName(b, studentB, slipEvent, resolveStudent));
   });
   const registeredStudentSet = new Set(registrationsForRegisterEvent.map((item) => item.studentIc));
   const studentClassOptions = useMemo(() => (
@@ -1761,7 +1773,7 @@ function App() {
       .map((registration) => ({ ...registration, student: studentMap.get(registration.studentIc) || {} }));
     return buildScoreDataFromResultRows(houses, hasLiveSummaryResultGroups ? summaryRows : fullRows);
   }, [houses, livePinnedEventIds, liveSummary?.resultGroups, registrations, studentMap]);
-  const scoreData = activeTab === 'live' && livePinnedEventIds.length
+  const scoreData = activeTab === 'live' && showPinnedLiveBoard
     ? pinnedLiveScoreData
     : activeTab === 'live' && liveSummary?.scoreData ? liveSummary.scoreData : fullScoreData;
 
@@ -1823,14 +1835,14 @@ function App() {
     ? liveSummary.latestResultGroups
     : fullLatestResultGroups;
   const liveResultGroups = useMemo(() => {
-    if (!livePinnedEventIds.length) return latestResultGroups;
+    if (!showPinnedLiveBoard) return latestResultGroups;
     const groupedResults = new Map((Array.isArray(liveSummary?.resultGroups) ? liveSummary.resultGroups : latestResultGroups)
       .map((group) => [group.id, group]));
     const eventById = new Map(liveEventOptions.map((event) => [event.id, event]));
     return livePinnedEventIds.map((id) => (
       groupedResults.get(id) || { id, event: eventById.get(id), results: [], latestMs: 0 }
     )).filter((group) => group.event);
-  }, [latestResultGroups, liveEventOptions, livePinnedEventIds, liveSummary?.resultGroups]);
+  }, [latestResultGroups, liveEventOptions, livePinnedEventIds, liveSummary?.resultGroups, showPinnedLiveBoard]);
   const latestLiveResult = [...liveResultGroups].sort((a, b) => Number(b.latestMs || 0) - Number(a.latestMs || 0))[0];
   const latestLiveResultId = latestLiveResult?.id || '';
   const latestLiveResultStamp = latestLiveResult?.latestMs || 0;
@@ -1935,7 +1947,7 @@ function App() {
       if (houseCompare) return houseCompare;
       const classCompare = compareClassNames(a.student.className || a.registration.className, b.student.className || b.registration.className);
       if (classCompare) return classCompare;
-      return displayEntryName(a.registration, a.student, slipEvent, t('team'), resolveStudent).localeCompare(displayEntryName(b.registration, b.student, slipEvent, t('team'), resolveStudent));
+      return displaySlipEntryName(a.registration, a.student, slipEvent, resolveStudent).localeCompare(displaySlipEntryName(b.registration, b.student, slipEvent, resolveStudent));
     })
     .map((row, index) => ({ ...row, participantNo: index + 1 }));
 
@@ -2683,7 +2695,7 @@ function App() {
       if (houseCompare) return houseCompare;
       const classCompare = compareClassNames(studentA.className || a.className, studentB.className || b.className);
       if (classCompare) return classCompare;
-      return displayEntryName(a, studentA, event, t('team'), resolveStudent).localeCompare(displayEntryName(b, studentB, event, t('team'), resolveStudent));
+      return displaySlipEntryName(a, studentA, event, resolveStudent).localeCompare(displaySlipEntryName(b, studentB, event, resolveStudent));
     });
     return eventRows.map((registration, index) => ({
       registration,
@@ -2698,7 +2710,7 @@ function App() {
         <tr>
           <td>${escapeHtml(participantNo)}</td>
           <td>${escapeHtml(registration.laneNumber || '-')}</td>
-          <td>${escapeHtml(displayEntryName(registration, student, event, t('team'), resolveStudent))}</td>
+          <td>${escapeHtml(displaySlipEntryName(registration, student, event, resolveStudent))}</td>
           <td>${escapeHtml(displayEntryClass(registration, student))}</td>
           <td>${escapeHtml(registration.house || student.house || '')}</td>
           <td>${escapeHtml(isResultPlace(registration.position) ? resultPlaceLabel(registration.position) : '')}</td>
@@ -2976,9 +2988,30 @@ function App() {
               </div>
               {accessRole === 'admin' && (
                 <div className="live-pin-controls">
-                  <div className="live-pin-title">
-                    <Pin size={18} />
-                    <strong>{t('pinnedEvents')}</strong>
+                  <div className="live-pin-heading">
+                    <div className="live-pin-title">
+                      <Pin size={18} />
+                      <strong>{t('pinnedEvents')}</strong>
+                    </div>
+                    <div className="live-board-view-toggle" role="group" aria-label={t('liveBoard')}>
+                      <button
+                        className={liveBoardView === 'overview' ? 'active' : ''}
+                        type="button"
+                        aria-pressed={liveBoardView === 'overview'}
+                        onClick={() => setLiveBoardView('overview')}
+                      >
+                        {t('overview')}
+                      </button>
+                      <button
+                        className={liveBoardView === 'pinned' ? 'active' : ''}
+                        type="button"
+                        disabled={!livePinnedEventIds.length}
+                        aria-pressed={liveBoardView === 'pinned'}
+                        onClick={() => setLiveBoardView('pinned')}
+                      >
+                        {t('pinnedEvents')}
+                      </button>
+                    </div>
                   </div>
                   <div className="live-pin-selectors">
                     {[0, 1, 2].map((slot) => {
@@ -3035,7 +3068,7 @@ function App() {
             <div className="panel fullscreen-winners-panel">
               <div className="section-head">
                 <div>
-                  <p className="eyebrow">{livePinnedEventIds.length ? t('pinnedEvents') : t('latest')}</p>
+                  <p className="eyebrow">{showPinnedLiveBoard ? t('pinnedEvents') : t('latest')}</p>
                   <h2>{t('results')}</h2>
                 </div>
                 <FileSpreadsheet size={22} />
@@ -3118,7 +3151,7 @@ function App() {
               <div className="panel results-panel">
                 <div className="section-head">
                   <div>
-                    <p className="eyebrow">{livePinnedEventIds.length ? t('pinnedEvents') : t('latest')}</p>
+                    <p className="eyebrow">{showPinnedLiveBoard ? t('pinnedEvents') : t('latest')}</p>
                     <h2>{t('results')}</h2>
                   </div>
                   <FileSpreadsheet size={22} />
@@ -3867,7 +3900,7 @@ function App() {
                           <tr key={registration.id}>
                             <td>{participantNo}</td>
                             <td>{registration.laneNumber || '-'}</td>
-                            <td>{displayEntryName(registration, student, slipEvent, t('team'), resolveStudent)}</td>
+                            <td>{displaySlipEntryName(registration, student, slipEvent, resolveStudent)}</td>
                             <td>{displayEntryClass(registration, student)}</td>
                             <td>{registration.house || student.house}</td>
                             <td>{isResultPlace(registration.position) ? resultPlaceLabel(registration.position) : ''}</td>
