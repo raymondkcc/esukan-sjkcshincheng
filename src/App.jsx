@@ -1875,7 +1875,7 @@ function App() {
   }, [activeTab, eventRegistrations, events, language, liveSummary?.laneGroups, summarySupportsOnDemandViews]);
   const laneGroups = useMemo(() => (
     activeTab === 'lanes' && summarySupportsOnDemandViews
-      ? (laneEventFilter ? liveSummary.laneGroups.filter((group) => group.id === laneEventFilter) : [])
+      ? (laneEventFilter ? liveSummary.laneGroups.filter((group) => group.id === laneEventFilter) : liveSummary.laneGroups)
       : laneEventOptions
       .filter((event) => !laneEventFilter || event.id === laneEventFilter)
       .map((event) => {
