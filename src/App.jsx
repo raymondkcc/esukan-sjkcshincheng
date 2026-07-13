@@ -117,7 +117,7 @@ const DEFAULT_SETTINGS = {
   maxTarikTaliPerHouseYear: 4,
 };
 const SCHOOL_LOGO_PATH = '/logo-sjkc-shin-cheng.png';
-const LIVE_SUMMARY_VERSION = 6;
+const LIVE_SUMMARY_VERSION = 7;
 const STUDENT_YEARS = [1, 2, 3, 4, 5, 6];
 const DEFAULT_LANE_COUNT = 8;
 const DEFAULT_EVENT_FORM = {
@@ -867,14 +867,14 @@ const normalizeLiveSummary = (summary) => {
     })) : summary.laneGroups,
     athleteLeaders: summary.athleteLeaders ? {
       ...summary.athleteLeaders,
-      male: summary.athleteLeaders.male ? {
-        ...summary.athleteLeaders.male,
-        student: normalizeStudentRecord(summary.athleteLeaders.male.student),
-      } : null,
-      female: summary.athleteLeaders.female ? {
-        ...summary.athleteLeaders.female,
-        student: normalizeStudentRecord(summary.athleteLeaders.female.student),
-      } : null,
+      male: (Array.isArray(summary.athleteLeaders.male)
+        ? summary.athleteLeaders.male
+        : summary.athleteLeaders.male ? [summary.athleteLeaders.male] : [])
+        .map((row) => ({ ...row, student: normalizeStudentRecord(row.student) })),
+      female: (Array.isArray(summary.athleteLeaders.female)
+        ? summary.athleteLeaders.female
+        : summary.athleteLeaders.female ? [summary.athleteLeaders.female] : [])
+        .map((row) => ({ ...row, student: normalizeStudentRecord(row.student) })),
     } : summary.athleteLeaders,
   };
 };
@@ -1283,8 +1283,8 @@ const buildLiveSummary = ({ houses, events, registrations, students }) => {
     latestResultGroups,
     laneGroups,
     athleteLeaders: {
-      male: athleteRows.find((row) => row.gender === 'Lelaki') || null,
-      female: athleteRows.find((row) => row.gender === 'Perempuan') || null,
+      male: athleteRows.filter((row) => row.gender === 'Lelaki').slice(0, 3),
+      female: athleteRows.filter((row) => row.gender === 'Perempuan').slice(0, 3),
     },
     updatedMs: Date.now(),
   };
@@ -1918,8 +1918,8 @@ function App() {
       displayStudentName(a.student).localeCompare(displayStudentName(b.student));
     const rows = Array.from(athletes.values()).sort(compareAthletes);
     return {
-      male: rows.find((row) => row.gender === 'Lelaki') || null,
-      female: rows.find((row) => row.gender === 'Perempuan') || null,
+      male: rows.filter((row) => row.gender === 'Lelaki').slice(0, 3),
+      female: rows.filter((row) => row.gender === 'Perempuan').slice(0, 3),
     };
   }, [registrations, studentMap]);
   const athleteLeaders = activeTab === 'live' && liveSummary?.athleteLeaders
@@ -3093,14 +3093,21 @@ function App() {
                   {[
                     [t('olahragawan'), athleteLeaders.male],
                     [t('olahragawati'), athleteLeaders.female],
-                  ].map(([label, athlete]) => (
+                  ].map(([label, athletes]) => (
                     <div className="athlete-row" key={label}>
                       <span>{label}</span>
-                      {athlete ? (
-                        <div>
-                          <strong>{displayStudentName(athlete.student)}</strong>
-                          <small>{athlete.student.className || '-'} - {athlete.student.house || '-'}</small>
-                          <b>{t('gold')} {athlete.gold} / {t('silver')} {athlete.silver} / {t('bronze')} {athlete.bronze}</b>
+                      {athletes.length ? (
+                        <div className="athlete-rankings">
+                          {athletes.map((athlete, index) => (
+                            <div className="athlete-rank" key={getStudentKey(athlete.student) || `${label}-${index}`}>
+                              <strong className="athlete-place">{index + 1}</strong>
+                              <div>
+                                <strong>{displayStudentName(athlete.student)}</strong>
+                                <small>{athlete.student.className || '-'} - {athlete.student.house || '-'}</small>
+                                <b>{t('gold')} {athlete.gold} / {t('silver')} {athlete.silver} / {t('bronze')} {athlete.bronze}</b>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       ) : <em>{t('noMedals')}</em>}
                     </div>

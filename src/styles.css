@@ -963,6 +963,31 @@ button {
   background: var(--surface-soft);
 }
 
+.athlete-rankings {
+  display: grid;
+  gap: 8px;
+}
+
+.athlete-rank {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.athlete-rank:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.athlete-place {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.2;
+  text-align: center;
+}
+
 .athlete-row > span {
   color: var(--muted);
   font-size: 0.72rem;
