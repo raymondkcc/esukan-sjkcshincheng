@@ -1321,6 +1321,8 @@ function App() {
   const [uploadingStudents, setUploadingStudents] = useState(false);
   const [notice, setNotice] = useState(null);
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [houseDraft, setHouseDraft] = useState(() => DEFAULT_HOUSES.join('\n'));
+  const [houseDraftDirty, setHouseDraftDirty] = useState(false);
   const [liveSummary, setLiveSummary] = useState(null);
   const [students, setStudents] = useState([]);
   const [events, setEvents] = useState([]);
@@ -1365,6 +1367,10 @@ function App() {
     const source = Array.isArray(settings.houses) ? settings.houses : DEFAULT_HOUSES;
     return sortHouseList(source);
   }, [settings.houses]);
+
+  useEffect(() => {
+    if (!houseDraftDirty) setHouseDraft(houses.join('\n'));
+  }, [houses, houseDraftDirty]);
   const liveBoardHeaderSchool = String(settings.liveBoardHeaderSchool || settings.schoolName || DEFAULT_SETTINGS.schoolName).trim();
   const liveBoardHeaderTitle = String(settings.liveBoardHeaderTitle || DEFAULT_SETTINGS.liveBoardHeaderTitle).trim();
   const liveEventOptions = Array.isArray(liveSummary?.eventOptions) ? liveSummary.eventOptions : events;
@@ -2015,7 +2021,13 @@ function App() {
       showNotice('Staff access required.', 'error');
       return;
     }
-    const payload = { ...settings, houses };
+    const nextHouses = splitHouseList(houseDraft);
+    if (!nextHouses.length) {
+      showNotice('Add at least one sports house before saving.', 'error');
+      return;
+    }
+    const payload = { ...settings, houses: nextHouses };
+    const housesChanged = nextHouses.length !== houses.length || nextHouses.some((house, index) => !isSameHouse(house, houses[index]));
     const { updatedAt, ...settingsForSignature } = payload;
     const settingsSignature = JSON.stringify(settingsForSignature);
     if (settingsSignature === savedSettingsRef.current) {
@@ -2023,7 +2035,30 @@ function App() {
       return;
     }
     await setDoc(refs.settings, { ...payload, updatedAt: serverTimestamp() }, { merge: true });
-    if (hasFullDataSnapshot) await refreshLiveSummary({ settings: payload, houses: payload.houses });
+    if (hasFullDataSnapshot) {
+      await refreshLiveSummary({ settings: payload, houses: payload.houses });
+    } else if (housesChanged) {
+      try {
+        const [studentsSnapshot, eventsSnapshot, registrationsSnapshot] = await Promise.all([
+          getDocs(refs.students),
+          getDocs(refs.events),
+          getDocs(refs.registrations),
+        ]);
+        await refreshLiveSummary({
+          settings: payload,
+          houses: payload.houses,
+          students: studentsSnapshot.docs.map((item) => normalizeStudentRecord({ id: item.id, ...item.data() })),
+          events: eventsSnapshot.docs.map((item) => normalizeEventRecord({ id: item.id, ...item.data() })),
+          registrations: registrationsSnapshot.docs.map((item) => normalizeRegistrationRecord({ id: item.id, ...item.data() })),
+        });
+      } catch (error) {
+        console.error(error);
+        showNotice(`Settings saved, but live board summary did not refresh: ${error.message || 'Firebase error'}`, 'error');
+      }
+    }
+    setSettings(payload);
+    setHouseDraft(nextHouses.join('\n'));
+    setHouseDraftDirty(false);
     savedSettingsRef.current = settingsSignature;
     showSuccess(t('settingsSaved'));
   };
@@ -3937,7 +3972,7 @@ function App() {
               <label>{t('schoolName')}<input value={settings.schoolName || ''} onChange={(event) => setSettings({ ...settings, schoolName: event.target.value })} /></label>
               <label>{t('eventTitle')}<input value={settings.eventTitle || ''} onChange={(event) => setSettings({ ...settings, eventTitle: event.target.value })} /></label>
               <label>{t('year')}<input type="number" value={settings.year || ''} onChange={(event) => setSettings({ ...settings, year: Number(event.target.value) })} /></label>
-              <label>{t('houses')}<textarea rows="4" value={houses.join('\n')} onChange={(event) => setSettings({ ...settings, houses: splitHouseList(event.target.value) })} /></label>
+              <label>{t('houses')}<textarea rows="4" value={houseDraft} onChange={(event) => { setHouseDraft(event.target.value); setHouseDraftDirty(true); }} /></label>
               <label>
                 {t('liveBoardSetting')}
                 <select value={settings.liveBoardMode || 'total-only'} onChange={(event) => setSettings({ ...settings, liveBoardMode: event.target.value })}>
