@@ -1321,8 +1321,6 @@ function App() {
   const [uploadingStudents, setUploadingStudents] = useState(false);
   const [notice, setNotice] = useState(null);
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
-  const [houseDraft, setHouseDraft] = useState(() => DEFAULT_HOUSES.join('\n'));
-  const [houseDraftDirty, setHouseDraftDirty] = useState(false);
   const [liveSummary, setLiveSummary] = useState(null);
   const [students, setStudents] = useState([]);
   const [events, setEvents] = useState([]);
@@ -1364,13 +1362,20 @@ function App() {
   }, [siteId]);
 
   const houses = useMemo(() => {
-    const source = Array.isArray(settings.houses) ? settings.houses : DEFAULT_HOUSES;
-    return sortHouseList(source);
-  }, [settings.houses]);
-
-  useEffect(() => {
-    if (!houseDraftDirty) setHouseDraft(houses.join('\n'));
-  }, [houses, houseDraftDirty]);
+    const configuredHouses = Array.isArray(settings.houses) ? settings.houses : DEFAULT_HOUSES;
+    const summaryHouses = Array.isArray(liveSummary?.scoreData?.houses)
+      ? liveSummary.scoreData.houses.map((row) => row.name)
+      : [];
+    const resultHouses = Array.isArray(liveSummary?.resultGroups)
+      ? liveSummary.resultGroups.flatMap((group) => group.results || []).map((result) => result.house || result.student?.house)
+      : [];
+    return sortHouseList([
+      ...configuredHouses,
+      ...summaryHouses,
+      ...resultHouses,
+      ...students.map((student) => student.house),
+    ]);
+  }, [liveSummary?.resultGroups, liveSummary?.scoreData?.houses, settings.houses, students]);
   const liveBoardHeaderSchool = String(settings.liveBoardHeaderSchool || settings.schoolName || DEFAULT_SETTINGS.schoolName).trim();
   const liveBoardHeaderTitle = String(settings.liveBoardHeaderTitle || DEFAULT_SETTINGS.liveBoardHeaderTitle).trim();
   const liveEventOptions = Array.isArray(liveSummary?.eventOptions) ? liveSummary.eventOptions : events;
@@ -1766,22 +1771,26 @@ function App() {
         .sort((a, b) => b.total - a.total || compareClassNames(a.name, b.name)),
     };
   }, [houses, registrations, studentMap]);
+  const hasLiveSummaryResultGroups = Array.isArray(liveSummary?.resultGroups);
+  const liveSummaryResultRows = useMemo(() => (
+    hasLiveSummaryResultGroups ? liveSummary.resultGroups.flatMap((group) => group.results || []) : []
+  ), [hasLiveSummaryResultGroups, liveSummary?.resultGroups]);
+  const liveSummaryScoreData = useMemo(() => (
+    hasLiveSummaryResultGroups ? buildScoreDataFromResultRows(houses, liveSummaryResultRows) : null
+  ), [hasLiveSummaryResultGroups, houses, liveSummaryResultRows]);
   const pinnedLiveScoreData = useMemo(() => {
     if (!livePinnedEventIds.length) return null;
-    const hasLiveSummaryResultGroups = Array.isArray(liveSummary?.resultGroups);
     const summaryRows = hasLiveSummaryResultGroups
-      ? liveSummary.resultGroups
-        .filter((group) => livePinnedEventIds.includes(group.id))
-        .flatMap((group) => group.results)
+      ? liveSummaryResultRows.filter((result) => livePinnedEventIds.includes(result.eventId))
       : [];
     const fullRows = registrations
       .filter((registration) => livePinnedEventIds.includes(registration.eventId))
       .map((registration) => ({ ...registration, student: studentMap.get(registration.studentIc) || {} }));
     return buildScoreDataFromResultRows(houses, hasLiveSummaryResultGroups ? summaryRows : fullRows);
-  }, [houses, livePinnedEventIds, liveSummary?.resultGroups, registrations, studentMap]);
+  }, [hasLiveSummaryResultGroups, houses, livePinnedEventIds, liveSummaryResultRows, registrations, studentMap]);
   const scoreData = activeTab === 'live' && showPinnedLiveBoard
     ? pinnedLiveScoreData
-    : activeTab === 'live' && liveSummary?.scoreData ? liveSummary.scoreData : fullScoreData;
+    : activeTab === 'live' && liveSummaryScoreData ? liveSummaryScoreData : activeTab === 'live' && liveSummary?.scoreData ? liveSummary.scoreData : fullScoreData;
   const leadingHouseScore = Math.max(0, ...scoreData.houses.map((house) => Number(house.total) || 0));
 
   const viewResults = useMemo(() => {
@@ -2021,13 +2030,7 @@ function App() {
       showNotice('Staff access required.', 'error');
       return;
     }
-    const nextHouses = splitHouseList(houseDraft);
-    if (!nextHouses.length) {
-      showNotice('Add at least one sports house before saving.', 'error');
-      return;
-    }
-    const payload = { ...settings, houses: nextHouses };
-    const housesChanged = nextHouses.length !== houses.length || nextHouses.some((house, index) => !isSameHouse(house, houses[index]));
+    const payload = { ...settings, houses };
     const { updatedAt, ...settingsForSignature } = payload;
     const settingsSignature = JSON.stringify(settingsForSignature);
     if (settingsSignature === savedSettingsRef.current) {
@@ -2035,30 +2038,8 @@ function App() {
       return;
     }
     await setDoc(refs.settings, { ...payload, updatedAt: serverTimestamp() }, { merge: true });
-    if (hasFullDataSnapshot) {
-      await refreshLiveSummary({ settings: payload, houses: payload.houses });
-    } else if (housesChanged) {
-      try {
-        const [studentsSnapshot, eventsSnapshot, registrationsSnapshot] = await Promise.all([
-          getDocs(refs.students),
-          getDocs(refs.events),
-          getDocs(refs.registrations),
-        ]);
-        await refreshLiveSummary({
-          settings: payload,
-          houses: payload.houses,
-          students: studentsSnapshot.docs.map((item) => normalizeStudentRecord({ id: item.id, ...item.data() })),
-          events: eventsSnapshot.docs.map((item) => normalizeEventRecord({ id: item.id, ...item.data() })),
-          registrations: registrationsSnapshot.docs.map((item) => normalizeRegistrationRecord({ id: item.id, ...item.data() })),
-        });
-      } catch (error) {
-        console.error(error);
-        showNotice(`Settings saved, but live board summary did not refresh: ${error.message || 'Firebase error'}`, 'error');
-      }
-    }
+    if (hasFullDataSnapshot) await refreshLiveSummary({ settings: payload, houses: payload.houses });
     setSettings(payload);
-    setHouseDraft(nextHouses.join('\n'));
-    setHouseDraftDirty(false);
     savedSettingsRef.current = settingsSignature;
     showSuccess(t('settingsSaved'));
   };
@@ -3034,7 +3015,7 @@ function App() {
                         className={liveBoardView === 'overview' ? 'active' : ''}
                         type="button"
                         aria-pressed={liveBoardView === 'overview'}
-                        onClick={() => setLiveBoardView('overview')}
+                        onClick={() => runScoreTransition(() => setLiveBoardView('overview'))}
                       >
                         {t('overview')}
                       </button>
@@ -3043,7 +3024,7 @@ function App() {
                         type="button"
                         disabled={!livePinnedEventIds.length}
                         aria-pressed={liveBoardView === 'pinned'}
-                        onClick={() => setLiveBoardView('pinned')}
+                        onClick={() => runScoreTransition(() => setLiveBoardView('pinned'))}
                       >
                         {t('pinnedEvents')}
                       </button>
@@ -3084,7 +3065,7 @@ function App() {
                   </button>
                 </div>
               )}
-              <div className="score-list">
+              <div className="score-list live-score-list" key={showPinnedLiveBoard ? 'pinned' : 'overview'}>
                 {scoreData.houses.map((house, index) => {
                   const score = Math.max(0, Number(house.total) || 0);
                   const progress = leadingHouseScore ? Math.min((score / leadingHouseScore) * 100, 100) : 0;
@@ -3972,7 +3953,6 @@ function App() {
               <label>{t('schoolName')}<input value={settings.schoolName || ''} onChange={(event) => setSettings({ ...settings, schoolName: event.target.value })} /></label>
               <label>{t('eventTitle')}<input value={settings.eventTitle || ''} onChange={(event) => setSettings({ ...settings, eventTitle: event.target.value })} /></label>
               <label>{t('year')}<input type="number" value={settings.year || ''} onChange={(event) => setSettings({ ...settings, year: Number(event.target.value) })} /></label>
-              <label>{t('houses')}<textarea rows="4" value={houseDraft} onChange={(event) => { setHouseDraft(event.target.value); setHouseDraftDirty(true); }} /></label>
               <label>
                 {t('liveBoardSetting')}
                 <select value={settings.liveBoardMode || 'total-only'} onChange={(event) => setSettings({ ...settings, liveBoardMode: event.target.value })}>

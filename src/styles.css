@@ -917,6 +917,28 @@ button {
   gap: 16px;
 }
 
+.live-score-list {
+  view-transition-name: live-score-list;
+  animation: liveBoardContentIn 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes liveBoardContentIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+::view-transition-old(live-score-list) {
+  animation: liveBoardContentOut 160ms ease-out both;
+}
+
+::view-transition-new(live-score-list) {
+  animation: liveBoardContentIn 300ms 70ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes liveBoardContentOut {
+  to { opacity: 0; transform: translateY(-5px); }
+}
+
 .score-row {
   display: grid;
   grid-template-columns: minmax(72px, 0.28fr) minmax(0, 1fr) 94px;
@@ -1102,6 +1124,12 @@ button {
   .finish-light::after {
     animation: none;
     transition: none;
+  }
+
+  .live-score-list,
+  ::view-transition-old(live-score-list),
+  ::view-transition-new(live-score-list) {
+    animation: none;
   }
 }
 
