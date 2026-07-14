@@ -916,11 +916,15 @@ button {
 }
 
 .score-track {
+  position: relative;
   height: clamp(56px, 8vh, 78px);
   overflow: hidden;
   border-radius: 8px;
-  background: var(--surface-strong);
-  box-shadow: inset 0 1px 5px rgba(23, 32, 51, 0.09);
+  background:
+    linear-gradient(90deg, rgba(23, 32, 51, 0.06) 1px, transparent 1px) 0 0 / 12.5% 100%,
+    linear-gradient(180deg, rgba(23, 32, 51, 0.06) 1px, transparent 1px) 0 0 / 100% 50%,
+    var(--surface-strong);
+  box-shadow: inset 0 1px 5px rgba(23, 32, 51, 0.09), inset 0 0 0 1px rgba(23, 32, 51, 0.04);
 }
 
 .score-number {
@@ -954,6 +958,135 @@ button {
 .house.purple { background: #7c3aed; border-color: #a78bfa; }
 .house.orange { background: #f97316; border-color: #fdba74; }
 .house.slate { background: #475569; border-color: #94a3b8; }
+
+.house.score-bar {
+  --house-base: #475569;
+  --house-edge: #94a3b8;
+  --house-glow: rgba(148, 163, 184, 0.82);
+  --house-ink: #ffffff;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: var(--house-ink);
+  background: linear-gradient(100deg, var(--house-base) 0%, var(--house-base) 58%, var(--house-edge) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.36), 0 0 14px -5px var(--house-glow);
+  transform-origin: left center;
+  transition: width 900ms cubic-bezier(0.22, 0.8, 0.28, 1);
+  animation: score-bar-arrival 920ms cubic-bezier(0.22, 0.8, 0.28, 1) var(--bar-delay, 0ms) both;
+  border-color: var(--house-edge);
+}
+
+.score-bar::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  opacity: 0.82;
+  background-image:
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.95) 0 1px, transparent 2px),
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.58) 0 1px, transparent 2px),
+    linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 46%, transparent 58%);
+  background-position: 0 28%, 19px 72%, -96px 0;
+  background-size: 42px 100%, 56px 100%, 108px 100%;
+  background-repeat: repeat-x, repeat-x, repeat-x;
+  animation: charged-particles 1.65s linear infinite;
+}
+
+.house-label {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  padding-right: 28px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.finish-light {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  right: -3px;
+  width: clamp(13px, 1.8vw, 19px);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: radial-gradient(circle at 36% 38%, #ffffff 0 18%, #fff5c2 32%, rgba(255, 255, 255, 0.76) 48%, transparent 72%);
+  box-shadow: 0 0 5px 2px #ffffff, 0 0 16px 5px #fff3ba, 0 0 28px 9px var(--house-glow);
+  transform: translateY(-50%);
+  animation: finish-charge 1.12s ease-in-out infinite;
+}
+
+.finish-light::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 50%;
+  width: clamp(30px, 5vw, 62px);
+  height: 3px;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg, transparent, var(--house-glow) 52%, rgba(255, 255, 255, 0.92));
+  filter: blur(0.4px);
+  opacity: 0.94;
+  animation: finish-flare 1.12s ease-in-out infinite;
+}
+
+.finish-light::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 52%;
+  width: clamp(42px, 7vw, 78px);
+  height: 28px;
+  transform: translateY(-50%);
+  opacity: 0.84;
+  background:
+    radial-gradient(circle, #ffffff 0 1px, transparent 2px) 4px 6px / 22px 14px,
+    radial-gradient(circle, var(--house-edge) 0 1px, transparent 2px) 13px 18px / 27px 16px,
+    radial-gradient(circle, rgba(255, 255, 255, 0.7) 0 1px, transparent 2px) 3px 20px / 18px 12px;
+  animation: end-sparks 920ms linear infinite;
+}
+
+.house.score-bar.red { --house-base: #dc2626; --house-edge: #fb7185; --house-glow: rgba(248, 113, 113, 0.9); }
+.house.score-bar.blue { --house-base: #2563eb; --house-edge: #60a5fa; --house-glow: rgba(96, 165, 250, 0.9); }
+.house.score-bar.yellow { --house-base: #facc15; --house-edge: #fde68a; --house-glow: rgba(250, 204, 21, 0.88); --house-ink: #422006; }
+.house.score-bar.green { --house-base: #059669; --house-edge: #34d399; --house-glow: rgba(52, 211, 153, 0.88); }
+.house.score-bar.purple { --house-base: #7c3aed; --house-edge: #a78bfa; --house-glow: rgba(167, 139, 250, 0.88); }
+.house.score-bar.orange { --house-base: #f97316; --house-edge: #fdba74; --house-glow: rgba(253, 186, 116, 0.88); }
+.house.score-bar.slate { --house-base: #475569; --house-edge: #94a3b8; --house-glow: rgba(148, 163, 184, 0.82); }
+
+@keyframes score-bar-arrival {
+  from { opacity: 0.35; transform: scaleX(0); }
+  72% { opacity: 1; transform: scaleX(1.018); }
+  to { opacity: 1; transform: scaleX(1); }
+}
+
+@keyframes charged-particles {
+  to { background-position: 42px 28%, 75px 72%, 12px 0; }
+}
+
+@keyframes finish-charge {
+  0%, 100% { opacity: 0.8; transform: translateY(-50%) scale(0.86); }
+  50% { opacity: 1; transform: translateY(-50%) scale(1.12); }
+}
+
+@keyframes finish-flare {
+  0%, 100% { opacity: 0.56; transform: translateY(-50%) scaleX(0.72); transform-origin: right; }
+  50% { opacity: 1; transform: translateY(-50%) scaleX(1); transform-origin: right; }
+}
+
+@keyframes end-sparks {
+  to { background-position: -23px 4px, -31px 20px, -17px 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .house.score-bar,
+  .score-bar::before,
+  .finish-light,
+  .finish-light::before,
+  .finish-light::after {
+    animation: none;
+    transition: none;
+  }
+}
 
 .mini-list,
 .result-list,

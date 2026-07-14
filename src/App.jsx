@@ -1776,6 +1776,7 @@ function App() {
   const scoreData = activeTab === 'live' && showPinnedLiveBoard
     ? pinnedLiveScoreData
     : activeTab === 'live' && liveSummary?.scoreData ? liveSummary.scoreData : fullScoreData;
+  const leadingHouseScore = Math.max(0, ...scoreData.houses.map((house) => Number(house.total) || 0));
 
   const viewResults = useMemo(() => {
     if (activeTab === 'viewResults' && summarySupportsOnDemandViews) {
@@ -3050,15 +3051,21 @@ function App() {
               )}
               <div className="score-list">
                 {scoreData.houses.map((house, index) => {
-                  const maxScore = Math.max(...scoreData.houses.map((item) => item.total), 1);
-                  const width = house.total > 0 ? Math.max((house.total / maxScore) * 100, 8) : 0;
+                  const score = Math.max(0, Number(house.total) || 0);
+                  const progress = leadingHouseScore ? Math.min((score / leadingHouseScore) * 100, 100) : 0;
                   return (
                     <div className="score-row" key={house.name} style={{ viewTransitionName: `score-row-${hashString(house.name)}` }}>
                       <div className="rank">{resultPlaceLabel(index + 1) || index + 1}</div>
-                      <div className="score-track">
-                        <div className={houseClassName(house.name)} style={{ width: `${width}%` }}>{house.name}</div>
+                      <div className="score-track" aria-label={`${house.name}: ${score} points, ${progress.toFixed(1)}% of the leader`}>
+                        <div
+                          className={`${houseClassName(house.name)} score-bar`}
+                          style={{ width: `${progress}%`, '--bar-delay': `${index * 140}ms` }}
+                        >
+                          <span className="house-label">{house.name}</span>
+                          <span className="finish-light" aria-hidden="true" />
+                        </div>
                       </div>
-                      <div className="score-number">{house.total}</div>
+                      <div className="score-number">{score}</div>
                     </div>
                   );
                 })}
