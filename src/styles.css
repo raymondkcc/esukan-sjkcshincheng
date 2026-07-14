@@ -761,6 +761,23 @@ button {
   height: 100%;
 }
 
+.live-grid:fullscreen .finish-light {
+  right: -7px;
+  width: clamp(30px, 2.7vw, 48px);
+  box-shadow: 0 0 8px 3px #ffffff, 0 0 24px 9px #fff3ba, 0 0 40px 15px var(--house-glow);
+}
+
+.live-grid:fullscreen .finish-light::before {
+  width: clamp(76px, 8vw, 146px);
+  height: 5px;
+}
+
+.live-grid:fullscreen .finish-light::after {
+  width: clamp(86px, 9vw, 164px);
+  height: 48px;
+  background-size: 28px 18px, 34px 20px, 22px 15px;
+}
+
 .live-grid:fullscreen .score-number {
   font-size: clamp(0.98rem, 2.55vw, 3.35rem);
 }
