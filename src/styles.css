@@ -1795,6 +1795,66 @@ td .house {
   align-items: start;
 }
 
+.open-event-picker {
+  width: min(760px, 100%);
+  display: grid;
+  gap: 20px;
+  margin: 34px auto;
+  padding: 26px;
+  border-top: 3px solid var(--accent);
+  background: var(--surface);
+}
+
+.open-event-picker h2 {
+  margin: 0;
+}
+
+.open-event-picker p:not(.eyebrow) {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.open-event-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.open-event-option {
+  display: grid;
+  gap: 7px;
+  min-height: 142px;
+  padding: 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--surface-soft);
+  text-align: left;
+}
+
+.open-event-option:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+}
+
+.open-event-option > span {
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 1000;
+  letter-spacing: 0.08em;
+}
+
+.open-event-option strong {
+  align-self: center;
+  font-size: 1.08rem;
+}
+
+.open-event-option small {
+  color: var(--muted);
+  font-weight: 900;
+}
+
 .open-relay-brief {
   position: relative;
   overflow: hidden;
@@ -1862,6 +1922,12 @@ td .house {
 .open-relay-form {
   display: grid;
   gap: 14px;
+}
+
+.open-relay-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .open-relay-contact-grid {
@@ -1994,8 +2060,14 @@ td .house {
 
 @media (max-width: 720px) {
   .open-relay-layout,
-  .open-relay-contact-grid {
+  .open-relay-contact-grid,
+  .open-event-options {
     grid-template-columns: 1fr;
+  }
+
+  .open-event-picker {
+    margin: 0;
+    padding: 18px;
   }
 }
 

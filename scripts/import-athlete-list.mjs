@@ -56,9 +56,20 @@ const genderLabels = {
 };
 
 const scoring = { 1: 10, 2: 7, 3: 5, 4: 3 };
-const OPEN_RELAY_EVENT_NO = 38;
-const OPEN_RELAY_EVENT_NAME = '\u5bb6\u957f/\u6821\u53cb/\u6559\u5e08 4\u00d7100\u7c73\u63a5\u529b\u8d5b';
-const OPEN_RELAY_BASE_NAME = '4\u00d7100\u7c73\u63a5\u529b\u8d5b';
+const OPEN_SIGNUP_EVENTS = {
+  37: {
+    name: '\u4e8c\u4eba\u4e09\u8db3',
+    baseName: '\u4e8c\u4eba\u4e09\u8db3',
+    registrationMode: 'open-pair',
+    teamSize: 2,
+  },
+  38: {
+    name: '\u5bb6\u957f/\u6821\u53cb/\u6559\u5e08 4\u00d7100\u7c73\u63a5\u529b\u8d5b',
+    baseName: '4\u00d7100\u7c73\u63a5\u529b\u8d5b',
+    registrationMode: 'open-relay',
+    teamSize: 4,
+  },
+};
 
 const cleanText = (value) => String(value ?? '')
   .normalize('NFC')
@@ -432,8 +443,8 @@ const findOrCreateStudent = (sourceStudent, inferredGender) => {
 masterEvents.forEach((sourceEvent) => {
   const existing = eventsByNo.get(sourceEvent.no);
   const participantBlock = participantBlocks.get(sourceEvent.no);
-  const openRelay = sourceEvent.no === OPEN_RELAY_EVENT_NO;
-  const title = openRelay ? OPEN_RELAY_EVENT_NAME : participantBlock?.title || existing?.name || defaultEventName(sourceEvent);
+  const openSignup = OPEN_SIGNUP_EVENTS[sourceEvent.no];
+  const title = openSignup ? openSignup.name : participantBlock?.title || existing?.name || defaultEventName(sourceEvent);
   const event = existing || {
     id: `excel-event-${sourceEvent.no}`,
     type: isRelayName(sourceEvent.name) ? 'Kumpulan' : 'Individu',
@@ -446,14 +457,15 @@ masterEvents.forEach((sourceEvent) => {
     id: event.id,
     no: sourceEvent.no,
     name: title,
-    baseName: openRelay ? OPEN_RELAY_BASE_NAME : sourceEvent.name,
-    category: openRelay ? 'Terbuka' : existing?.category || eventCategory(sourceEvent.year, sourceGender(sourceEvent.gender)),
-    lanePlan: openRelay
+    baseName: openSignup ? openSignup.baseName : sourceEvent.name,
+    category: openSignup ? 'Terbuka' : existing?.category || eventCategory(sourceEvent.year, sourceGender(sourceEvent.gender)),
+    lanePlan: openSignup
       ? sourceEvent.lanePlan.map((lane) => ({ laneNumber: lane.laneNumber }))
       : sourceEvent.lanePlan,
-    ...(openRelay ? {
+    ...(openSignup ? {
       type: 'Kumpulan',
-      registrationMode: 'open-relay',
+      registrationMode: openSignup.registrationMode,
+      teamSize: openSignup.teamSize,
       withoutStudent: false,
     } : {}),
   };
