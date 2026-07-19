@@ -120,6 +120,73 @@ const SCHOOL_LOGO_PATH = '/logo-sjkc-shin-cheng.png';
 const LIVE_SUMMARY_VERSION = 7;
 const STUDENT_YEARS = [1, 2, 3, 4, 5, 6];
 const DEFAULT_LANE_COUNT = 8;
+const OPEN_RELAY_EVENT_NO = 38;
+const OPEN_RELAY_LANE_COUNT = 8;
+const OPEN_RELAY_TEXT = {
+  ms: {
+    tab: 'Pendaftaran Terbuka',
+    eyebrow: '4x100 RELAY TERBUKA',
+    title: 'Daftarkan pasukan anda',
+    description: 'Untuk ibu bapa, alumni dan guru. Masukkan empat nama dan sistem akan mengunci lorong kosong seterusnya.',
+    teamName: 'Nama pasukan (pilihan)',
+    coordinator: 'Nama penyelaras (pilihan)',
+    phone: 'Nombor telefon (pilihan)',
+    runners: 'Empat pelari',
+    runner: 'Pelari',
+    submit: 'Daftar pasukan',
+    available: 'Kosong',
+    taken: 'Sudah didaftar',
+    places: 'Tempat tersedia',
+    full: 'Semua lorong telah penuh.',
+    required: 'Masukkan nama keempat-empat pelari.',
+    success: 'Pasukan anda telah didaftarkan.',
+    unavailable: 'Acara pendaftaran terbuka belum tersedia.',
+    share: 'Pautan borang',
+    publicMode: 'Pendaftaran terbuka',
+  },
+  en: {
+    tab: 'Open sign-up',
+    eyebrow: 'OPEN 4x100 RELAY',
+    title: 'Register your team',
+    description: 'For parents, alumni, and teachers. Enter four runner names and the next available lane is reserved automatically.',
+    teamName: 'Team name (optional)',
+    coordinator: 'Contact name (optional)',
+    phone: 'Phone number (optional)',
+    runners: 'Four runners',
+    runner: 'Runner',
+    submit: 'Register team',
+    available: 'Available',
+    taken: 'Registered',
+    places: 'places available',
+    full: 'All lanes are full.',
+    required: 'Enter all four runner names.',
+    success: 'Your team is registered.',
+    unavailable: 'The open registration event is not available yet.',
+    share: 'Form link',
+    publicMode: 'Open sign-up',
+  },
+  zh: {
+    tab: '\u516c\u5f00\u62a5\u540d',
+    eyebrow: '\u516c\u5f00 4x100 \u63a5\u529b',
+    title: '\u62a5\u540d\u53c2\u8d5b',
+    description: '\u4f9b\u5bb6\u957f\u3001\u6821\u53cb\u548c\u6559\u5e08\u62a5\u540d\u3002\u586b\u5199\u56db\u4f4d\u8dd1\u624b\u540d\u5b57\uff0c\u7cfb\u7edf\u4f1a\u81ea\u52a8\u4fdd\u7559\u4e0b\u4e00\u4e2a\u7a7a\u8dd1\u9053\u3002',
+    teamName: '\u961f\u4f0d\u540d\u79f0\uff08\u53ef\u9009\uff09',
+    coordinator: '\u8054\u7edc\u4eba\u59d3\u540d\uff08\u53ef\u9009\uff09',
+    phone: '\u8054\u7edc\u7535\u8bdd\uff08\u53ef\u9009\uff09',
+    runners: '\u56db\u4f4d\u8dd1\u624b',
+    runner: '\u8dd1\u624b',
+    submit: '\u62a5\u540d\u961f\u4f0d',
+    available: '\u7a7a\u7f3a',
+    taken: '\u5df2\u62a5\u540d',
+    places: '\u4e2a\u7a7a\u4f4d',
+    full: '\u6240\u6709\u8dd1\u9053\u5df2\u6ee1\u3002',
+    required: '\u8bf7\u586b\u5199\u56db\u4f4d\u8dd1\u624b\u7684\u540d\u5b57\u3002',
+    success: '\u60a8\u7684\u961f\u4f0d\u5df2\u6210\u529f\u62a5\u540d\u3002',
+    unavailable: '\u516c\u5f00\u62a5\u540d\u9879\u76ee\u6682\u672a\u5f00\u653e\u3002',
+    share: '\u8868\u5355\u94fe\u63a5',
+    publicMode: '\u516c\u5f00\u62a5\u540d',
+  },
+};
 const DEFAULT_EVENT_FORM = {
   startNo: 1,
   baseName: '',
@@ -145,15 +212,15 @@ const ADMIN_PASSWORD = 'BBC8419adm';
 const ACCESS_LEVELS = {
   user: {
     label: 'Live View',
-    tabs: ['live', 'viewResults', 'lanes'],
+    tabs: ['live', 'viewResults', 'lanes', 'openSignup'],
   },
   teacher: {
     label: 'Teacher',
-    tabs: ['live', 'viewResults', 'lanes', 'students', 'events', 'register', 'slips', 'settings'],
+    tabs: ['live', 'viewResults', 'lanes', 'openSignup', 'students', 'events', 'register', 'slips', 'settings'],
   },
   admin: {
     label: 'Admin',
-    tabs: ['live', 'viewResults', 'lanes', 'students', 'events', 'register', 'results', 'slips', 'settings'],
+    tabs: ['live', 'viewResults', 'lanes', 'openSignup', 'students', 'events', 'register', 'results', 'slips', 'settings'],
   },
 };
 const LANGUAGE_OPTIONS = [
@@ -999,6 +1066,7 @@ const displayStudentName = (student, fallback = '') => {
 };
 const isHouseEntry = (registration) => registration?.entryType === 'house';
 const isRelayEntry = (registration) => registration?.entryType === 'relay';
+const isOpenRelayEvent = (event) => event?.registrationMode === 'open-relay' || Number(event?.no) === OPEN_RELAY_EVENT_NO;
 const isRelayEvent = (event) => {
   const name = `${event?.name || ''} ${event?.baseName || ''}`;
   return /4\s*(?:x|×)/i.test(name) || (String(event?.type || '').toLocaleUpperCase('ms-MY').includes('KUMPULAN') && /(RELAY|接力)/i.test(name));
@@ -1308,7 +1376,7 @@ function App() {
   const params = new URLSearchParams(window.location.search);
   const siteId = params.get('site') || import.meta.env.VITE_ESUKAN_SITE_ID || 'sinming-esukan';
 
-  const [activeTab, setActiveTab] = useState('live');
+  const [activeTab, setActiveTab] = useState(() => (params.get('signup') === String(OPEN_RELAY_EVENT_NO) ? 'openSignup' : 'live'));
   const [accessRole, setAccessRole] = useState(() => localStorage.getItem('esukan-access-role') || 'user');
   const [loginMode, setLoginMode] = useState('');
   const [accessPassword, setAccessPassword] = useState('');
@@ -1339,6 +1407,7 @@ function App() {
   const [registerClassFilter, setRegisterClassFilter] = useState('');
   const [registerGenderFilter, setRegisterGenderFilter] = useState('');
   const [relayTeamDrafts, setRelayTeamDrafts] = useState({});
+  const [openRelayForm, setOpenRelayForm] = useState({ teamName: '', coordinator: '', phone: '', members: ['', '', '', ''] });
   const [resultEventId, setResultEventId] = useState('');
   const [slipEventId, setSlipEventId] = useState('');
   const [selectedSlipEventIds, setSelectedSlipEventIds] = useState([]);
@@ -1391,7 +1460,7 @@ function App() {
     Array.isArray(liveSummary?.resultGroups) &&
     Array.isArray(liveSummary?.laneGroups);
   const needsSummaryBootstrap = activeTab !== 'live' && !summarySupportsOnDemandViews;
-  const needsFullData = needsSummaryBootstrap || ['events', 'register', 'results', 'slips'].includes(activeTab);
+  const needsFullData = needsSummaryBootstrap || ['events', 'register', 'results', 'slips', 'openSignup'].includes(activeTab);
   const shouldLoadStudentYear = activeTab === 'students' && Boolean(studentYearFilter) && !needsFullData;
   const hasFullDataSnapshot = needsFullData &&
     loadedSections.students &&
@@ -1403,6 +1472,7 @@ function App() {
   const nextEventNo = useMemo(() => Math.max(0, ...events.map((event) => Number(event.no || 0))) + 1, [events]);
   const currentLanguage = LANGUAGE_OPTIONS.find((item) => item.id === language) || LANGUAGE_OPTIONS[0];
   const t = (key) => TEXT[language]?.[key] || TEXT.ms[key] || key;
+  const openRelayText = OPEN_RELAY_TEXT[language] || OPEN_RELAY_TEXT.ms;
   const showNotice = (message, tone = 'info') => {
     setNotice({ id: Date.now(), message, tone });
   };
@@ -1646,6 +1716,20 @@ function App() {
   const registrationsForRegisterEvent = eventRegistrations.get(registerEventId) || [];
   const registrationsForResultEvent = eventRegistrations.get(resultEventId) || [];
   const registrationsForSlipEvent = eventRegistrations.get(slipEventId) || [];
+  const openRelayEvent = events.find(isOpenRelayEvent);
+  const registrationsForOpenRelay = openRelayEvent ? eventRegistrations.get(openRelayEvent.id) || [] : [];
+  const openRelayLanes = useMemo(() => {
+    if (!openRelayEvent) return [];
+    const configuredLanes = (Array.isArray(openRelayEvent.lanePlan) ? openRelayEvent.lanePlan : [])
+      .map((lane) => Number(lane?.laneNumber || lane?.lane || 0))
+      .filter((lane) => lane > 0);
+    const lanes = configuredLanes.length ? configuredLanes : Array.from({ length: OPEN_RELAY_LANE_COUNT }, (_, index) => index + 1);
+    return Array.from(new Set(lanes)).sort((a, b) => a - b);
+  }, [openRelayEvent]);
+  const openRelayRegistrationsByLane = useMemo(() => new Map(
+    registrationsForOpenRelay.map((registration) => [Number(registration.laneNumber || 0), registration]),
+  ), [registrationsForOpenRelay]);
+  const openRelaySignupUrl = `${window.location.origin}${window.location.pathname}?${new URLSearchParams({ site: siteId, signup: String(OPEN_RELAY_EVENT_NO) }).toString()}`;
   const withResolvedLanes = (event, eventRows) => {
     const { registrationsByLane } = resolveLaneAssignments(event, eventRows);
     const assignmentsById = new Map(Array.from(registrationsByLane.values()).map((registration) => [registration.id, registration]));
@@ -1691,7 +1775,7 @@ function App() {
   const registerEligibility = getEventEligibility(registerEvent);
   const registerEffectiveClassFilter = registerEligibility.year ? String(registerEligibility.year) : registerClassFilter;
   const registerEffectiveGenderFilter = registerEligibility.gender || registerGenderFilter;
-  const registerCandidates = registerEvent?.withoutStudent ? [] : visibleStudents
+  const registerCandidates = registerEvent?.withoutStudent || isOpenRelayEvent(registerEvent) ? [] : visibleStudents
     .filter((student) => {
       const query = registerQuery.trim().toLowerCase();
       const matchesQuery = !query || [student.name, student.chineseName, student.className, student.gender, student.house].some((value) =>
@@ -2634,6 +2718,58 @@ function App() {
     showSuccess(t('relayTeamSaved'));
   };
 
+  const submitOpenRelay = async (submitEvent) => {
+    submitEvent.preventDefault();
+    if (!refs || !openRelayEvent) {
+      showNotice(openRelayText.unavailable, 'error');
+      return;
+    }
+    const members = openRelayForm.members.map((member) => String(member || '').trim());
+    if (members.some((member) => !member)) {
+      showNotice(openRelayText.required, 'error');
+      return;
+    }
+    const laneNumber = openRelayLanes.find((lane) => !openRelayRegistrationsByLane.has(lane));
+    if (!laneNumber) {
+      showNotice(openRelayText.full, 'error');
+      return;
+    }
+    const id = `${openRelayEvent.id}_open-relay-lane-${laneNumber}`;
+    const nextRegistration = {
+      id,
+      eventId: openRelayEvent.id,
+      entryType: 'relay',
+      registrationMode: 'open-relay',
+      studentIc: `open-relay-${openRelayEvent.id}-lane-${laneNumber}`,
+      laneNumber,
+      house: '',
+      className: '',
+      teamName: String(openRelayForm.teamName || '').trim(),
+      coordinator: String(openRelayForm.coordinator || '').trim(),
+      phone: String(openRelayForm.phone || '').trim(),
+      teamMembers: members.map((name, index) => ({
+        name,
+        chineseName: '',
+        className: '',
+        studentIc: `open-relay-member-${hashString(`${id}-${index}-${name}`)}`,
+      })),
+      position: '',
+      points: 0,
+      updatedAt: serverTimestamp(),
+      updatedMs: Date.now(),
+    };
+    try {
+      await setDoc(doc(refs.registrations, id), nextRegistration, { merge: true });
+      await refreshLiveSummary({
+        registrations: [...registrations.filter((registration) => registration.id !== id), nextRegistration],
+      });
+      setOpenRelayForm({ teamName: '', coordinator: '', phone: '', members: ['', '', '', ''] });
+      showSuccess(openRelayText.success);
+    } catch (error) {
+      showNotice(error?.message || openRelayText.unavailable, 'error');
+    }
+  };
+
   const updateResult = async (registration, position) => {
     if (accessRole !== 'admin') {
       showNotice('Admin access required.', 'error');
@@ -2906,6 +3042,7 @@ function App() {
     ['live', Monitor, t('liveBoard')],
     ['viewResults', FileSpreadsheet, t('viewResults')],
     ['lanes', Activity, t('lanes')],
+    ['openSignup', ClipboardList, openRelayText.tab],
     ['students', Users, t('students')],
     ['events', Trophy, t('events')],
     ['register', ClipboardList, t('register')],
@@ -3218,6 +3355,100 @@ function App() {
           </section>
         )}
 
+        {activeTab === 'openSignup' && visibleTabs.includes('openSignup') && (
+          openRelayEvent ? (
+            <section className="open-relay-layout">
+              <aside className="panel open-relay-brief">
+                <p className="eyebrow">{openRelayText.eyebrow}</p>
+                <h2>{openRelayEvent.name}</h2>
+                <p>{openRelayText.description}</p>
+                <div className="open-relay-stats" aria-label={`${openRelayLanes.length - registrationsForOpenRelay.length} ${openRelayText.places}`}>
+                  <span><b>{openRelayLanes.length - registrationsForOpenRelay.length}</b>{openRelayText.places}</span>
+                  <span><b>{openRelayLanes.length}</b>{t('lanes')}</span>
+                </div>
+                <label className="open-relay-share">
+                  {openRelayText.share}
+                  <input readOnly value={openRelaySignupUrl} onFocus={(event) => event.target.select()} />
+                </label>
+              </aside>
+
+              <form className="panel open-relay-form" onSubmit={submitOpenRelay}>
+                <div className="section-head">
+                  <div>
+                    <p className="eyebrow">{openRelayText.tab}</p>
+                    <h2>{openRelayText.title}</h2>
+                  </div>
+                  <ClipboardList size={22} />
+                </div>
+                <label>
+                  {openRelayText.teamName}
+                  <input value={openRelayForm.teamName} onChange={(event) => setOpenRelayForm((current) => ({ ...current, teamName: event.target.value }))} />
+                </label>
+                <div className="open-relay-contact-grid">
+                  <label>
+                    {openRelayText.coordinator}
+                    <input value={openRelayForm.coordinator} onChange={(event) => setOpenRelayForm((current) => ({ ...current, coordinator: event.target.value }))} />
+                  </label>
+                  <label>
+                    {openRelayText.phone}
+                    <input inputMode="tel" value={openRelayForm.phone} onChange={(event) => setOpenRelayForm((current) => ({ ...current, phone: event.target.value }))} />
+                  </label>
+                </div>
+                <fieldset className="open-relay-members">
+                  <legend>{openRelayText.runners}</legend>
+                  {openRelayForm.members.map((member, index) => (
+                    <label key={index}>
+                      <span>{index + 1}</span>
+                      <input required value={member} placeholder={`${openRelayText.runner} ${index + 1}`} onChange={(event) => setOpenRelayForm((current) => {
+                        const members = [...current.members];
+                        members[index] = event.target.value;
+                        return { ...current, members };
+                      })} />
+                    </label>
+                  ))}
+                </fieldset>
+                <button className="primary-button open-relay-submit" type="submit" disabled={!openRelayLanes.some((lane) => !openRelayRegistrationsByLane.has(lane))}>
+                  <ClipboardList size={16} /> {openRelayText.submit}
+                </button>
+              </form>
+
+              <section className="panel open-relay-lanes">
+                <div className="section-head">
+                  <div>
+                    <p className="eyebrow">{t('lanes')}</p>
+                    <h2>{registrationsForOpenRelay.length} / {openRelayLanes.length}</h2>
+                  </div>
+                  <Activity size={22} />
+                </div>
+                <div className="open-relay-lane-grid">
+                  {openRelayLanes.map((lane) => {
+                    const registration = openRelayRegistrationsByLane.get(lane);
+                    const members = registration?.teamMembers || [];
+                    return (
+                      <article className={registration ? 'open-relay-lane filled' : 'open-relay-lane'} key={lane}>
+                        <header>
+                          <b>{t('lane')} {lane}</b>
+                          <span>{registration ? openRelayText.taken : openRelayText.available}</span>
+                        </header>
+                        {registration ? (
+                          <>
+                            <strong>{registration.teamName || displayEntryName(registration, {}, openRelayEvent, t('team'), resolveStudent)}</strong>
+                            <ol>{members.map((member, index) => <li key={`${lane}-${index}`}>{member.name}</li>)}</ol>
+                          </>
+                        ) : <p>{openRelayText.available}</p>}
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            </section>
+          ) : (
+            <section className="split-grid">
+              <div className="panel control-panel"><p className="help-text">{openRelayText.unavailable}</p></div>
+            </section>
+          )
+        )}
+
         {activeTab === 'students' && visibleTabs.includes('students') && (
           <section className="split-grid">
             <div className="panel control-panel">
@@ -3492,7 +3723,7 @@ function App() {
                                 />
                               )}
                             </div>
-                          ) : (event.withoutStudent ? `${t('houseOnly')} (${getTeamCountPerHouse(event)} ${t('teamsPerHouse')})` : t('student'))}
+                          ) : (isOpenRelayEvent(event) ? openRelayText.publicMode : event.withoutStudent ? `${t('houseOnly')} (${getTeamCountPerHouse(event)} ${t('teamsPerHouse')})` : t('student'))}
                         </td>
                         <td>
                           {editing ? (
@@ -3551,7 +3782,7 @@ function App() {
                 {t('event')}
                 <select value={registerEventId} onChange={(event) => setRegisterEventId(event.target.value)}>
                   <option value="">{t('chooseEvent')}</option>
-                  {events.map((event) => <option key={event.id} value={event.id}>{tEventLabel(event)}</option>)}
+                  {events.filter((event) => !isOpenRelayEvent(event)).map((event) => <option key={event.id} value={event.id}>{tEventLabel(event)}</option>)}
                 </select>
               </label>
               {registerEvent?.withoutStudent && (

@@ -1788,6 +1788,230 @@ td .house {
   min-width: 0;
 }
 
+.open-relay-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.78fr) minmax(340px, 1fr) minmax(300px, 0.9fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.open-relay-brief {
+  position: relative;
+  overflow: hidden;
+  min-height: 100%;
+  background:
+    linear-gradient(132deg, color-mix(in srgb, var(--accent) 13%, var(--surface)) 0 34%, transparent 34%),
+    var(--surface);
+}
+
+.open-relay-brief::after {
+  content: "01 02 03 04";
+  position: absolute;
+  right: -26px;
+  bottom: 16px;
+  color: color-mix(in srgb, var(--accent) 20%, transparent);
+  font-size: 2.25rem;
+  font-weight: 1000;
+  letter-spacing: 0.08em;
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+
+.open-relay-brief h2,
+.open-relay-form h2,
+.open-relay-lanes h2 {
+  margin: 0;
+}
+
+.open-relay-brief > p:not(.eyebrow) {
+  position: relative;
+  z-index: 1;
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+.open-relay-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.open-relay-stats span {
+  display: grid;
+  gap: 2px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 1000;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.open-relay-stats b {
+  color: var(--text);
+  font-size: 1.45rem;
+  letter-spacing: 0;
+}
+
+.open-relay-share {
+  position: relative;
+  z-index: 1;
+  margin-top: 18px;
+}
+
+.open-relay-share input {
+  font-size: 0.75rem;
+}
+
+.open-relay-form {
+  display: grid;
+  gap: 14px;
+}
+
+.open-relay-contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.open-relay-members {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 2px 0 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.open-relay-members legend {
+  padding: 0 6px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 1000;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.open-relay-members label {
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.open-relay-members label > span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #ffffff;
+  background: var(--accent);
+  font-size: 0.76rem;
+}
+
+.open-relay-submit {
+  justify-content: center;
+}
+
+.open-relay-lanes {
+  display: grid;
+  gap: 14px;
+}
+
+.open-relay-lane-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.open-relay-lane {
+  min-height: 126px;
+  padding: 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.open-relay-lane.filled {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+.open-relay-lane header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 1000;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.open-relay-lane header b {
+  color: var(--text);
+}
+
+.open-relay-lane header span {
+  color: var(--success);
+}
+
+.open-relay-lane.filled header span {
+  color: var(--accent);
+}
+
+.open-relay-lane strong {
+  display: block;
+  margin-top: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.open-relay-lane ol {
+  display: grid;
+  gap: 3px;
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.open-relay-lane p {
+  margin: 28px 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+@media (max-width: 1120px) {
+  .open-relay-layout {
+    grid-template-columns: minmax(250px, 0.8fr) minmax(340px, 1fr);
+  }
+
+  .open-relay-lanes {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .open-relay-layout,
+  .open-relay-contact-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .registered-top {
   display: flex;
   align-items: flex-start;
