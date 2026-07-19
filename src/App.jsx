@@ -25,6 +25,7 @@ import {
   Languages,
   Maximize2,
   Medal,
+  Menu,
   Minimize2,
   Monitor,
   Moon,
@@ -1411,6 +1412,7 @@ function App() {
   const [accessError, setAccessError] = useState('');
   const [theme, setTheme] = useState(() => localStorage.getItem('esukan-theme') || 'light');
   const [language, setLanguage] = useState(() => localStorage.getItem('esukan-language') || 'ms');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLiveBoardFullscreen, setIsLiveBoardFullscreen] = useState(false);
   const [liveBoardView, setLiveBoardView] = useState('pinned');
   const [loadedSections, setLoadedSections] = useState({ settings: false, liveSummary: false, students: false, events: false, registrations: false });
@@ -3092,11 +3094,29 @@ function App() {
             <h1>{t('appTitle')}</h1>
           </div>
         </div>
-        <div className="top-actions">
+        <button
+          className="mobile-menu-toggle"
+          type="button"
+          aria-controls="site-navigation"
+          aria-expanded={isMobileMenuOpen}
+          aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+          onClick={() => setIsMobileMenuOpen((current) => !current)}
+        >
+          {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+        <div id="site-navigation" className={`top-actions${isMobileMenuOpen ? ' mobile-open' : ''}`}>
           {tabs.length > 1 ? (
             <nav className="tabbar">
               {tabs.map(([id, Icon, label]) => (
-                <button key={id} type="button" className={activeTab === id ? 'tab active' : 'tab'} onClick={() => setActiveTab(id)}>
+                <button
+                  key={id}
+                  type="button"
+                  className={activeTab === id ? 'tab active' : 'tab'}
+                  onClick={() => {
+                    setActiveTab(id);
+                    setIsMobileMenuOpen(false);
+                  }}
+                >
                   <Icon size={16} />
                   {label}
                 </button>
@@ -3105,9 +3125,9 @@ function App() {
           ) : <div className="viewer-pill">{t('liveBoard')}</div>}
           <div className="access-controls">
             <span>{accessRole === 'admin' ? t('admin') : accessRole === 'teacher' ? t('teacher') : t('liveView')}</span>
-            {accessRole !== 'user' && <button type="button" onClick={returnToLiveView}>{t('liveView')}</button>}
-            <button type="button" onClick={() => openLogin('teacher')}>{t('teacher')}</button>
-            <button type="button" onClick={() => openLogin('admin')}>{t('admin')}</button>
+            {accessRole !== 'user' && <button type="button" onClick={() => { returnToLiveView(); setIsMobileMenuOpen(false); }}>{t('liveView')}</button>}
+            <button type="button" onClick={() => { openLogin('teacher'); setIsMobileMenuOpen(false); }}>{t('teacher')}</button>
+            <button type="button" onClick={() => { openLogin('admin'); setIsMobileMenuOpen(false); }}>{t('admin')}</button>
           </div>
           <button className="language-toggle" type="button" onClick={cycleLanguage} title={t('changeLanguage')} aria-label={t('changeLanguage')}>
             <Languages size={16} />

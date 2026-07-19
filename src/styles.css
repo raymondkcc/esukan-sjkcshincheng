@@ -169,6 +169,7 @@ button {
 .tab,
 .theme-toggle,
 .language-toggle,
+.mobile-menu-toggle,
 .primary-button,
 .secondary-button,
 .icon-button,
@@ -239,6 +240,12 @@ button {
 
 .language-toggle span {
   font-size: 0.78rem;
+}
+
+.mobile-menu-toggle {
+  display: none;
+  width: 42px;
+  padding: 0;
 }
 
 .viewer-pill,
@@ -2315,6 +2322,9 @@ td .house {
   }
 
   .topbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 12px;
+    row-gap: 12px;
     padding-inline: 12px;
   }
 
@@ -2337,6 +2347,12 @@ td .house {
   }
 
   .top-actions {
+    display: none;
+  }
+
+  .top-actions.mobile-open {
+    display: grid;
+    grid-column: 1 / -1;
     grid-template-columns: 1fr;
     grid-template-areas:
       "tabs"
@@ -2344,6 +2360,10 @@ td .house {
       "language"
       "theme";
     justify-items: stretch;
+  }
+
+  .mobile-menu-toggle {
+    display: inline-flex;
   }
 
   .theme-toggle,
