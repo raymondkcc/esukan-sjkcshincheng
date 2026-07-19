@@ -1877,6 +1877,10 @@ td .house {
   pointer-events: none;
 }
 
+.open-pair-brief::after {
+  content: "01 02";
+}
+
 .open-relay-brief h2,
 .open-relay-form h2,
 .open-relay-lanes h2 {

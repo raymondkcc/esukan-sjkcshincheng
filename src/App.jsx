@@ -127,8 +127,10 @@ const OPEN_RELAY_TEXT = {
   ms: {
     tab: 'Pendaftaran Terbuka',
     eyebrow: '4x100 RELAY TERBUKA',
+    pairEyebrow: 'PASUKAN TERBUKA',
     title: 'Daftarkan pasukan anda',
     description: 'Untuk ibu bapa, alumni dan guru. Masukkan empat nama dan sistem akan mengunci lorong kosong seterusnya.',
+    pairDescription: 'Untuk ibu bapa, alumni dan guru. Masukkan dua nama dan sistem akan mengunci lorong kosong seterusnya.',
     teamName: 'Nama pasukan (pilihan)',
     coordinator: 'Nama penyelaras (pilihan)',
     phone: 'Nombor telefon (pilihan)',
@@ -153,8 +155,10 @@ const OPEN_RELAY_TEXT = {
   en: {
     tab: 'Open sign-up',
     eyebrow: 'OPEN 4x100 RELAY',
+    pairEyebrow: 'OPEN TEAM ENTRY',
     title: 'Register your team',
     description: 'For parents, alumni, and teachers. Enter four runner names and the next available lane is reserved automatically.',
+    pairDescription: 'For parents, alumni, and teachers. Enter two participant names and the next available lane is reserved automatically.',
     teamName: 'Team name (optional)',
     coordinator: 'Contact name (optional)',
     phone: 'Phone number (optional)',
@@ -179,8 +183,10 @@ const OPEN_RELAY_TEXT = {
   zh: {
     tab: '\u516c\u5f00\u62a5\u540d',
     eyebrow: '\u516c\u5f00 4x100 \u63a5\u529b',
+    pairEyebrow: '\u516c\u5f00\u4e8c\u4eba\u4e09\u8db3',
     title: '\u62a5\u540d\u53c2\u8d5b',
     description: '\u4f9b\u5bb6\u957f\u3001\u6821\u53cb\u548c\u6559\u5e08\u62a5\u540d\u3002\u586b\u5199\u56db\u4f4d\u8dd1\u624b\u540d\u5b57\uff0c\u7cfb\u7edf\u4f1a\u81ea\u52a8\u4fdd\u7559\u4e0b\u4e00\u4e2a\u7a7a\u8dd1\u9053\u3002',
+    pairDescription: '\u4f9b\u5bb6\u957f\u3001\u6821\u53cb\u548c\u6559\u5e08\u62a5\u540d\u3002\u586b\u5199\u4e24\u4f4d\u53c2\u8d5b\u8005\u540d\u5b57\uff0c\u7cfb\u7edf\u4f1a\u81ea\u52a8\u4fdd\u7559\u4e0b\u4e00\u4e2a\u7a7a\u8dd1\u9053\u3002',
     teamName: '\u961f\u4f0d\u540d\u79f0\uff08\u53ef\u9009\uff09',
     coordinator: '\u8054\u7edc\u4eba\u59d3\u540d\uff08\u53ef\u9009\uff09',
     phone: '\u8054\u7edc\u7535\u8bdd\uff08\u53ef\u9009\uff09',
@@ -3383,10 +3389,10 @@ function App() {
           openSignupEvents.length ? (
             openRelayEvent ? (
             <section className="open-relay-layout">
-              <aside className="panel open-relay-brief">
-                <p className="eyebrow">{openRelayText.eyebrow}</p>
+              <aside className={Number(openRelayEvent.no) === OPEN_PAIR_EVENT_NO ? 'panel open-relay-brief open-pair-brief' : 'panel open-relay-brief'}>
+                <p className="eyebrow">{Number(openRelayEvent.no) === OPEN_PAIR_EVENT_NO ? openRelayText.pairEyebrow : openRelayText.eyebrow}</p>
                 <h2>{openRelayEvent.name}</h2>
-                <p>{openRelayText.description}</p>
+                <p>{Number(openRelayEvent.no) === OPEN_PAIR_EVENT_NO ? openRelayText.pairDescription : openRelayText.description}</p>
                 <div className="open-relay-stats" aria-label={`${openRelayLanes.length - registrationsForOpenRelay.length} ${openRelayText.places}`}>
                   <span><b>{openRelayLanes.length - registrationsForOpenRelay.length}</b>{openRelayText.places}</span>
                   <span><b>{openRelayLanes.length}</b>{t('lanes')}</span>
