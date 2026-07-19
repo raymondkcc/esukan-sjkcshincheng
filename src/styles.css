@@ -1859,16 +1859,6 @@ td .house {
   letter-spacing: 0;
 }
 
-.open-relay-share {
-  position: relative;
-  z-index: 1;
-  margin-top: 18px;
-}
-
-.open-relay-share input {
-  font-size: 0.75rem;
-}
-
 .open-relay-form {
   display: grid;
   gap: 14px;
@@ -1901,21 +1891,18 @@ td .house {
 }
 
 .open-relay-members label {
-  grid-template-columns: 28px minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
+  grid-template-columns: 1fr;
+  gap: 6px;
   margin: 0;
 }
 
 .open-relay-members label > span {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  color: #ffffff;
-  background: var(--accent);
+  color: var(--text);
   font-size: 0.76rem;
+  font-weight: 1000;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: none;
 }
 
 .open-relay-submit {

@@ -133,6 +133,7 @@ const OPEN_RELAY_TEXT = {
     phone: 'Nombor telefon (pilihan)',
     runners: 'Empat pelari',
     runner: 'Pelari',
+    runnerName: (number) => `Pelari ${number}`,
     submit: 'Daftar pasukan',
     available: 'Kosong',
     taken: 'Sudah didaftar',
@@ -141,7 +142,6 @@ const OPEN_RELAY_TEXT = {
     required: 'Masukkan nama keempat-empat pelari.',
     success: 'Pasukan anda telah didaftarkan.',
     unavailable: 'Acara pendaftaran terbuka belum tersedia.',
-    share: 'Pautan borang',
     publicMode: 'Pendaftaran terbuka',
   },
   en: {
@@ -154,6 +154,7 @@ const OPEN_RELAY_TEXT = {
     phone: 'Phone number (optional)',
     runners: 'Four runners',
     runner: 'Runner',
+    runnerName: (number) => `Runner ${number} name`,
     submit: 'Register team',
     available: 'Available',
     taken: 'Registered',
@@ -162,7 +163,6 @@ const OPEN_RELAY_TEXT = {
     required: 'Enter all four runner names.',
     success: 'Your team is registered.',
     unavailable: 'The open registration event is not available yet.',
-    share: 'Form link',
     publicMode: 'Open sign-up',
   },
   zh: {
@@ -175,6 +175,7 @@ const OPEN_RELAY_TEXT = {
     phone: '\u8054\u7edc\u7535\u8bdd\uff08\u53ef\u9009\uff09',
     runners: '\u56db\u4f4d\u8dd1\u624b',
     runner: '\u8dd1\u624b',
+    runnerName: (number) => `\u8dd1\u624b ${number} \u540d\u5b57`,
     submit: '\u62a5\u540d\u961f\u4f0d',
     available: '\u7a7a\u7f3a',
     taken: '\u5df2\u62a5\u540d',
@@ -183,7 +184,6 @@ const OPEN_RELAY_TEXT = {
     required: '\u8bf7\u586b\u5199\u56db\u4f4d\u8dd1\u624b\u7684\u540d\u5b57\u3002',
     success: '\u60a8\u7684\u961f\u4f0d\u5df2\u6210\u529f\u62a5\u540d\u3002',
     unavailable: '\u516c\u5f00\u62a5\u540d\u9879\u76ee\u6682\u672a\u5f00\u653e\u3002',
-    share: '\u8868\u5355\u94fe\u63a5',
     publicMode: '\u516c\u5f00\u62a5\u540d',
   },
 };
@@ -1729,7 +1729,6 @@ function App() {
   const openRelayRegistrationsByLane = useMemo(() => new Map(
     registrationsForOpenRelay.map((registration) => [Number(registration.laneNumber || 0), registration]),
   ), [registrationsForOpenRelay]);
-  const openRelaySignupUrl = `${window.location.origin}${window.location.pathname}?${new URLSearchParams({ site: siteId, signup: String(OPEN_RELAY_EVENT_NO) }).toString()}`;
   const withResolvedLanes = (event, eventRows) => {
     const { registrationsByLane } = resolveLaneAssignments(event, eventRows);
     const assignmentsById = new Map(Array.from(registrationsByLane.values()).map((registration) => [registration.id, registration]));
@@ -3366,10 +3365,6 @@ function App() {
                   <span><b>{openRelayLanes.length - registrationsForOpenRelay.length}</b>{openRelayText.places}</span>
                   <span><b>{openRelayLanes.length}</b>{t('lanes')}</span>
                 </div>
-                <label className="open-relay-share">
-                  {openRelayText.share}
-                  <input readOnly value={openRelaySignupUrl} onFocus={(event) => event.target.select()} />
-                </label>
               </aside>
 
               <form className="panel open-relay-form" onSubmit={submitOpenRelay}>
@@ -3398,8 +3393,8 @@ function App() {
                   <legend>{openRelayText.runners}</legend>
                   {openRelayForm.members.map((member, index) => (
                     <label key={index}>
-                      <span>{index + 1}</span>
-                      <input required value={member} placeholder={`${openRelayText.runner} ${index + 1}`} onChange={(event) => setOpenRelayForm((current) => {
+                      <span>{openRelayText.runnerName(index + 1)}</span>
+                      <input required value={member} onChange={(event) => setOpenRelayForm((current) => {
                         const members = [...current.members];
                         members[index] = event.target.value;
                         return { ...current, members };
