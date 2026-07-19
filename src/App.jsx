@@ -3994,7 +3994,7 @@ function App() {
                 {t('quickEvent')}
                 <select value={laneEventFilter} onChange={(event) => setLaneEventFilter(event.target.value)}>
                   <option value="">{t('allEvents')}</option>
-                  {laneEventOptions.map((event) => <option key={event.id} value={event.id}>{tEventDisplayName(event)}</option>)}
+                  {laneEventOptions.map((event) => <option key={event.id} value={event.id}>{tEventLabel(event)}</option>)}
                 </select>
               </label>
               <div className="stats-box">
